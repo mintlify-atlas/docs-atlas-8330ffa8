@@ -1,0 +1,184 @@
+{
+  "projectType": "ai-ml",
+  "projectName": "Qwen3-VL",
+  "projectDescription": "Multimodal large language model series for vision and language understanding by Qwen team, Alibaba Cloud",
+  "theme": "aspen",
+  "primaryColor": "#7C3AED",
+  "lightColor": "#A78BFA",
+  "darkColor": "#5B21B6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/model-architecture",
+              "concepts/model-variants",
+              "concepts/key-features"
+            ]
+          },
+          {
+            "group": "Inference",
+            "pages": [
+              "inference/basic-usage",
+              "inference/image-processing",
+              "inference/video-processing",
+              "inference/batch-inference",
+              "inference/pixel-control",
+              "inference/generation-parameters"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/overview",
+              "deployment/vllm",
+              "deployment/sglang",
+              "deployment/docker",
+              "deployment/api-service"
+            ]
+          },
+          {
+            "group": "Fine-tuning",
+            "pages": [
+              "fine-tuning/overview",
+              "fine-tuning/dataset-preparation",
+              "fine-tuning/training-configuration",
+              "fine-tuning/training-script",
+              "fine-tuning/lora"
+            ]
+          },
+          {
+            "group": "Capabilities",
+            "pages": [
+              "capabilities/omni-recognition",
+              "capabilities/document-parsing",
+              "capabilities/ocr",
+              "capabilities/grounding-2d",
+              "capabilities/grounding-3d",
+              "capabilities/video-understanding",
+              "capabilities/spatial-understanding",
+              "capabilities/visual-coding",
+              "capabilities/mobile-agent",
+              "capabilities/computer-use"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Model API",
+            "pages": [
+              "api/model-loading",
+              "api/generation",
+              "api/processor"
+            ]
+          },
+          {
+            "group": "qwen-vl-utils",
+            "pages": [
+              "api/utils/overview",
+              "api/utils/process-vision-info",
+              "api/utils/fetch-image",
+              "api/utils/fetch-video",
+              "api/utils/smart-resize"
+            ]
+          },
+          {
+            "group": "Training API",
+            "pages": [
+              "api/training/trainer",
+              "api/training/arguments",
+              "api/training/data-processor"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Examples",
+        "groups": [
+          {
+            "group": "Cookbooks",
+            "pages": [
+              "examples/omni-recognition",
+              "examples/document-parsing",
+              "examples/ocr-extraction",
+              "examples/2d-grounding",
+              "examples/3d-grounding",
+              "examples/video-understanding",
+              "examples/long-documents",
+              "examples/multimodal-coding",
+              "examples/thinking-with-images",
+              "examples/spatial-understanding",
+              "examples/mobile-agent",
+              "examples/computer-use"
+            ]
+          },
+          {
+            "group": "Integration Examples",
+            "pages": [
+              "examples/openai-api",
+              "examples/web-ui",
+              "examples/streaming"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Additional Resources",
+            "pages": [
+              "resources/model-cards",
+              "resources/benchmarks",
+              "resources/troubleshooting",
+              "resources/faq",
+              "resources/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Visual Agent capabilities for PC/mobile GUI interaction",
+    "Visual coding for Draw.io/HTML/CSS/JS generation",
+    "Advanced spatial perception with 2D/3D grounding",
+    "Long context support (256K native, expandable to 1M tokens)",
+    "Enhanced multimodal reasoning for STEM/Math",
+    "Omni recognition (celebrities, anime, products, landmarks, flora/fauna)",
+    "Multilingual OCR support (32 languages)",
+    "Video understanding with second-level indexing",
+    "Document parsing with layout and structure analysis",
+    "Multiple model variants (2B to 235B parameters)",
+    "Instruct and Thinking editions",
+    "Fine-tuning framework with LoRA support"
+  ],
+  "publicApiSurface": [
+    "AutoModelForImageTextToText.from_pretrained",
+    "AutoProcessor.from_pretrained",
+    "model.generate",
+    "processor.apply_chat_template",
+    "process_vision_info",
+    "fetch_image",
+    "fetch_video",
+    "extract_vision_info",
+    "smart_resize",
+    "qwenvl.train.train_qwen",
+    "qwenvl.train.trainer.QwenTrainer",
+    "qwenvl.data.data_processor.DataProcessor"
+  ]
+}
