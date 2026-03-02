@@ -1,0 +1,359 @@
+---
+title: Installation
+description: Install transformers, qwen-vl-utils, and dependencies to get started with Qwen3-VL.
+---
+
+## Prerequisites
+
+Before installing Qwen3-VL, ensure you have:
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    Python 3.8 or higher
+  </Card>
+  <Card title="CUDA" icon="microchip">
+    NVIDIA GPU with CUDA support (recommended)
+  </Card>
+  <Card title="PyTorch" icon="fire">
+    PyTorch 2.0 or higher
+  </Card>
+  <Card title="pip" icon="box">
+    pip package manager
+  </Card>
+</CardGroup>
+
+## Basic Installation
+
+<Steps>
+  <Step title="Install Transformers">
+    Qwen3-VL requires transformers version 4.57.0 or higher:
+
+    ```bash
+    pip install "transformers>=4.57.0"
+    ```
+
+    <Note>
+      This is the minimum requirement to run Qwen3-VL with Hugging Face Transformers.
+    </Note>
+  </Step>
+
+  <Step title="Install qwen-vl-utils (Optional but Recommended)">
+    For advanced vision processing capabilities:
+
+    ```bash
+    pip install qwen-vl-utils==0.0.14
+    ```
+
+    <Tip>
+      For faster video loading, install with the `decord` feature:
+
+      ```bash
+      pip install "qwen-vl-utils[decord]"
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Verify Installation">
+    Test your installation:
+
+    ```python
+    from transformers import AutoModelForImageTextToText, AutoProcessor
+    
+    # This should run without errors
+    processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct")
+    print("Installation successful!")
+    ```
+  </Step>
+</Steps>
+
+## Performance Optimizations
+
+### Flash Attention 2
+
+For significantly faster inference, especially with multi-image and video scenarios:
+
+```bash
+pip install -U flash-attn --no-build-isolation
+```
+
+<Warning>
+  Flash Attention 2 requires:
+  - Compatible NVIDIA GPU (Ampere or newer)
+  - CUDA 11.6 or higher
+  - Models loaded in `torch.float16` or `torch.bfloat16`
+</Warning>
+
+Usage example:
+
+```python
+import torch
+from transformers import AutoModelForImageTextToText
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    torch_dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2",
+    device_map="auto",
+)
+```
+
+### Video Processing Backends
+
+Qwen3-VL supports multiple video decoding backends:
+
+<Tabs>
+  <Tab title="torchcodec (Recommended)">
+    Best performance and compatibility:
+
+    ```bash
+    # Follow official installation instructions
+    # https://github.com/pytorch/torchcodec
+    ```
+
+    <Note>
+      Supports both HTTP and HTTPS URLs. Requires FFmpeg.
+    </Note>
+  </Tab>
+
+  <Tab title="decord">
+    Fast decoding for Linux users:
+
+    ```bash
+    pip install "qwen-vl-utils[decord]"
+    ```
+
+    <Warning>
+      - Only supports HTTP URLs (not HTTPS)
+      - May have decoding issues on some videos
+      - Project is no longer actively maintained
+    </Warning>
+  </Tab>
+
+  <Tab title="torchvision">
+    Default fallback option:
+
+    ```bash
+    # Already included with transformers
+    ```
+
+    <Note>
+      - torchvision >= 0.19.0 supports HTTP and HTTPS
+      - Older versions have no URL support
+      - Slower than decord and torchcodec
+    </Note>
+  </Tab>
+</Tabs>
+
+Switch backends by setting an environment variable:
+
+```bash
+export FORCE_QWENVL_VIDEO_READER=torchcodec  # or decord, torchvision
+```
+
+## Deployment Installation
+
+For production deployment with vLLM or SGLang:
+
+<CodeGroup>
+```bash vLLM
+# Install accelerate and qwen-vl-utils
+pip install accelerate
+pip install qwen-vl-utils==0.0.14
+
+# Install latest vLLM (>= 0.11.0)
+uv pip install -U vllm
+```
+
+```bash SGLang
+# Install SGLang
+pip install sglang[all]
+
+# Install qwen-vl-utils
+pip install qwen-vl-utils==0.0.14
+```
+</CodeGroup>
+
+<Note>
+  For detailed deployment instructions, see the [Deployment Guide](/deployment/overview).
+</Note>
+
+## China Mainland Users
+
+For users in mainland China, we recommend using ModelScope:
+
+```python
+from modelscope import snapshot_download
+
+# Download model checkpoint
+model_dir = snapshot_download('qwen/Qwen3-VL-8B-Instruct')
+
+# Load from local directory
+from transformers import AutoModelForImageTextToText
+model = AutoModelForImageTextToText.from_pretrained(
+    model_dir,
+    dtype="auto",
+    device_map="auto"
+)
+```
+
+## Docker Installation
+
+Use our pre-built Docker images for a simplified setup:
+
+```bash
+docker run --gpus all --ipc=host --network=host --rm --name qwen3vl \
+  -it qwenllm/qwenvl:qwen3vl-cu128 bash
+```
+
+<Tip>
+  The Docker image includes:
+  - Pre-configured environment
+  - All dependencies
+  - CUDA 12.8 support
+  
+  You only need to install GPU drivers on the host machine.
+</Tip>
+
+## Installation Verification
+
+Run this complete test to verify your installation:
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+import torch
+
+print("Testing Qwen3-VL installation...")
+
+# Check transformers version
+import transformers
+print(f"Transformers version: {transformers.__version__}")
+assert transformers.__version__ >= "4.57.0", "Please upgrade transformers"
+
+# Check CUDA availability
+print(f"CUDA available: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"CUDA version: {torch.version.cuda}")
+    print(f"GPU count: {torch.cuda.device_count()}")
+
+# Try loading processor
+try:
+    processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct")
+    print("✓ Processor loaded successfully")
+except Exception as e:
+    print(f"✗ Error loading processor: {e}")
+
+# Check qwen-vl-utils
+try:
+    import qwen_vl_utils
+    print(f"✓ qwen-vl-utils version: {qwen_vl_utils.__version__}")
+except ImportError:
+    print("○ qwen-vl-utils not installed (optional)")
+
+# Check flash-attn
+try:
+    import flash_attn
+    print("✓ Flash Attention 2 available")
+except ImportError:
+    print("○ Flash Attention 2 not installed (optional)")
+
+print("\nInstallation verification complete!")
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ModuleNotFoundError: No module named 'transformers'" icon="triangle-exclamation">
+    Make sure you've installed transformers:
+
+    ```bash
+    pip install "transformers>=4.57.0"
+    ```
+  </Accordion>
+
+  <Accordion title="CUDA out of memory" icon="memory">
+    Try these solutions:
+
+    1. Use a smaller model (e.g., 2B or 4B instead of 235B)
+    2. Enable quantization with FP8 models
+    3. Use `device_map="auto"` for automatic device placement
+    4. Reduce batch size or max_new_tokens
+
+    ```python
+    # Use FP8 quantized model
+    model = AutoModelForImageTextToText.from_pretrained(
+        "Qwen/Qwen3-VL-8B-Instruct-FP8",
+        dtype="auto",
+        device_map="auto"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Flash Attention installation fails" icon="bolt">
+    Flash Attention 2 requires:
+    - NVIDIA GPU with Ampere architecture or newer
+    - CUDA 11.6+
+    - Proper build tools
+
+    If installation fails, you can skip it and use default attention:
+
+    ```python
+    # Don't specify attn_implementation
+    model = AutoModelForImageTextToText.from_pretrained(
+        "Qwen/Qwen3-VL-8B-Instruct",
+        dtype="auto",
+        device_map="auto"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Video decoding errors" icon="video">
+    If you encounter video processing issues:
+
+    1. Try a different backend:
+       ```bash
+       export FORCE_QWENVL_VIDEO_READER=torchcodec
+       ```
+
+    2. Ensure you have the required dependencies:
+       - torchcodec: Requires FFmpeg
+       - decord: Linux only, may need to build from source
+       - torchvision: Requires version >= 0.19.0 for URL support
+
+    3. Use local video files instead of URLs as a workaround
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that you have Qwen3-VL installed, you can:
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Run your first inference with an image
+  </Card>
+  <Card
+    title="Advanced Usage"
+    icon="graduation-cap"
+    href="/inference/pixel-control"
+  >
+    Learn about pixel control, batching, and optimization
+  </Card>
+  <Card
+    title="Deployment"
+    icon="server"
+    href="/deployment/overview"
+  >
+    Deploy Qwen3-VL with vLLM or SGLang
+  </Card>
+  <Card
+    title="Cookbooks"
+    icon="book-open"
+    href="https://github.com/QwenLM/Qwen3-VL/tree/main/cookbooks"
+  >
+    Explore practical examples and use cases
+  </Card>
+</CardGroup>

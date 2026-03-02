@@ -1,0 +1,169 @@
+---
+title: Streaming Responses
+description: Enable streaming responses with vLLM and SGLang for real-time inference
+---
+
+Streaming allows you to receive model responses incrementally, which is useful for providing real-time feedback to users. Qwen3-VL supports streaming through vLLM and SGLang deployment.
+
+## vLLM Server Setup
+
+Launch a vLLM server with streaming support:
+
+```bash
+# Efficient inference with FP8 checkpoint
+# Requires NVIDIA H100+ and CUDA 12+
+vllm serve Qwen/Qwen3-VL-235B-A22B-Instruct-FP8 \
+  --tensor-parallel-size 8 \
+  --mm-encoder-tp-mode data \
+  --enable-expert-parallel \
+  --async-scheduling \
+  --media-io-kwargs '{"video": {"num_frames": -1}}' \
+  --host 0.0.0.0 \
+  --port 22002
+```
+
+## SGLang Server Setup
+
+Alternatively, launch an SGLang server:
+
+```bash
+python -m sglang.launch_server \
+   --model-path Qwen/Qwen3-VL-235B-A22B-Instruct \
+   --host 0.0.0.0 \
+   --port 22002 \
+   --tp 4
+```
+
+## Streaming Client Example
+
+Once your server is running, you can use the OpenAI client to stream responses:
+
+```python
+import time
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="EMPTY",
+    base_url="http://127.0.0.1:22002/v1",
+    timeout=3600
+)
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": "https://ofasys-multimodal-wlcb-3-toshanghai.oss-accelerate.aliyuncs.com/wpf272043/keepme/image/receipt.png"
+                }
+            },
+            {
+                "type": "text",
+                "text": "Read all the text in the image."
+            }
+        ]
+    }
+]
+
+start = time.time()
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-VL-235B-A22B-Instruct-FP8",
+    messages=messages,
+    max_tokens=2048,
+    stream=True  # Enable streaming
+)
+
+# Process streaming response
+for chunk in response:
+    if chunk.choices[0].delta.content is not None:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+print(f"\n\nResponse costs: {time.time() - start:.2f}s")
+```
+
+## Video Streaming Example
+
+You can also stream responses for video inputs:
+
+```python
+import time
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="EMPTY",
+    base_url="http://127.0.0.1:22002/v1",
+    timeout=3600
+)
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video_url",
+                "video_url": {
+                    "url": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-VL/space_woaudio.mp4"
+                }
+            },
+            {
+                "type": "text",
+                "text": "How long is this video?"
+            }
+        ]
+    }
+]
+
+start = time.time()
+
+# Configure video frame sampling (vLLM only)
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-VL-235B-A22B-Instruct-FP8",
+    messages=messages,
+    max_tokens=2048,
+    stream=True,
+    extra_body={"mm_processor_kwargs": {"fps": 2, "do_sample_frames": True}}
+)
+
+for chunk in response:
+    if chunk.choices[0].delta.content is not None:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+print(f"\n\nResponse costs: {time.time() - start:.2f}s")
+```
+
+## Server Configuration Options
+
+### vLLM Options
+
+- `--tensor-parallel-size`: Number of GPUs for tensor parallelism
+- `--mm-encoder-tp-mode`: Multimodal encoder tensor parallel mode
+- `--enable-expert-parallel`: Enable expert parallelism for MoE models
+- `--async-scheduling`: Enable async scheduling for better throughput
+- `--media-io-kwargs`: Configure video frame sampling
+
+### SGLang Options
+
+- `--tp`: Tensor parallel size
+- `--model-path`: Path to model checkpoint
+- `--host` and `--port`: Server address configuration
+
+## Installation Requirements
+
+```bash
+pip install accelerate
+pip install qwen-vl-utils==0.0.14
+# Install vLLM (requires version >= 0.11.0)
+uv pip install -U vllm
+```
+
+## Benefits of Streaming
+
+- **Real-Time Feedback**: Users see responses as they're generated
+- **Better UX**: Reduces perceived latency
+- **Early Termination**: Can stop generation early if needed
+- **Progress Indication**: Shows the model is actively processing
+
+## Additional Resources
+
+For more details on deployment and serving options, refer to the [vLLM documentation](https://docs.vllm.ai/en/latest/serving/multimodal_inputs.html) and the [vLLM community guide for Qwen3-VL](https://docs.vllm.ai/projects/recipes/en/latest/Qwen/Qwen3-VL.html).

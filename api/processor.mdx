@@ -1,0 +1,425 @@
+---
+title: Processor
+description: Process images, videos, and text with AutoProcessor
+---
+
+## AutoProcessor.from_pretrained
+
+Load the processor for tokenizing text and preprocessing images/videos.
+
+```python
+from transformers import AutoProcessor
+
+processor = AutoProcessor.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct"
+)
+```
+
+### Parameters
+
+<ParamField path="pretrained_model_name_or_path" type="string" required>
+  Model identifier from Hugging Face Hub or local path. Should match the model being used.
+  
+  ```python
+  processor = AutoProcessor.from_pretrained(
+      "Qwen/Qwen3-VL-235B-A22B-Instruct"
+  )
+  ```
+</ParamField>
+
+### Returns
+
+Returns a `Qwen3VLProcessor` instance that handles both text tokenization and image/video preprocessing.
+
+---
+
+## processor.apply_chat_template
+
+Format conversation messages into model inputs with proper tokenization and vision preprocessing.
+
+```python
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+```
+
+### Parameters
+
+<ParamField path="messages" type="list[dict]" required>
+  Conversation messages in chat format. Each message contains `role` and `content`.
+  
+  **Message Format:**
+  
+  ```python
+  messages = [
+      {
+          "role": "user",
+          "content": [
+              {
+                  "type": "image",
+                  "image": "https://example.com/image.jpg"
+              },
+              {"type": "text", "text": "Describe this image."}
+          ]
+      }
+  ]
+  ```
+  
+  **Content Types:**
+  - `{"type": "text", "text": "..."}`
+  - `{"type": "image", "image": "url|path|base64"}`
+  - `{"type": "video", "video": "url|path"}`
+  
+  **Image Sources:**
+  - URL: `"https://example.com/image.jpg"`
+  - Local file: `"file:///path/to/image.jpg"`
+  - Base64: `"data:image;base64,/9j/..."`
+  
+  **Video Sources:**
+  - URL: `"https://example.com/video.mp4"`
+  - Local file: `"file:///path/to/video.mp4"`
+  - Frame list: `["file:///frame1.jpg", "file:///frame2.jpg", ...]`
+</ParamField>
+
+<ParamField path="tokenize" type="bool" default="True">
+  Whether to tokenize the text into input IDs.
+  
+  - `True`: Returns tokenized tensors ready for model input
+  - `False`: Returns formatted text string
+  
+  ```python
+  # Get tokenized inputs
+  inputs = processor.apply_chat_template(
+      messages,
+      tokenize=True,
+      return_tensors="pt"
+  )
+  
+  # Get text only
+  text = processor.apply_chat_template(
+      messages,
+      tokenize=False
+  )
+  ```
+</ParamField>
+
+<ParamField path="add_generation_prompt" type="bool" default="False">
+  Whether to add the assistant prompt token at the end for generation.
+  
+  Should be `True` when generating responses, `False` when formatting training data.
+  
+  ```python
+  inputs = processor.apply_chat_template(
+      messages,
+      tokenize=True,
+      add_generation_prompt=True  # Add <|im_start|>assistant\n
+  )
+  ```
+</ParamField>
+
+<ParamField path="return_dict" type="bool" default="False">
+  Whether to return a dictionary with named fields.
+  
+  - `True`: Returns dict with `input_ids`, `attention_mask`, `pixel_values`, etc.
+  - `False`: Returns tuple
+  
+  ```python
+  inputs = processor.apply_chat_template(
+      messages,
+      tokenize=True,
+      return_dict=True
+  )
+  # Access: inputs.input_ids, inputs.pixel_values, etc.
+  ```
+</ParamField>
+
+<ParamField path="return_tensors" type="string">
+  Type of tensors to return.
+  
+  - `"pt"`: PyTorch tensors (most common)
+  - `"np"`: NumPy arrays
+  - `None`: Python lists
+  
+  ```python
+  inputs = processor.apply_chat_template(
+      messages,
+      tokenize=True,
+      return_tensors="pt"
+  )
+  ```
+</ParamField>
+
+<ParamField path="padding" type="bool | string" default="False">
+  Padding strategy for batch processing.
+  
+  - `True`: Pad to longest sequence in batch
+  - `False`: No padding
+  - `"max_length"`: Pad to model's max length
+  
+  **Required for batch generation.**
+  
+  ```python
+  # Batch processing
+  processor.tokenizer.padding_side = 'left'
+  inputs = processor.apply_chat_template(
+      batch_messages,
+      tokenize=True,
+      return_tensors="pt",
+      padding=True
+  )
+  ```
+</ParamField>
+
+<ParamField path="add_vision_id" type="bool" default="False">
+  Whether to add labels ("Picture 1:", "Video 1:") to visual inputs.
+  
+  Helpful when processing multiple images/videos for better reference.
+  
+  ```python
+  inputs = processor.apply_chat_template(
+      messages,
+      tokenize=True,
+      add_vision_id=True
+  )
+  # Output includes: "Picture 1: <image> Picture 2: <image> Video 1: <video>"
+  ```
+</ParamField>
+
+<ParamField path="fps" type="float" default="2">
+  Frame sampling rate for videos (frames per second).
+  
+  ```python
+  inputs = processor.apply_chat_template(
+      messages,
+      tokenize=True,
+      return_tensors="pt",
+      fps=4  # Sample 4 frames per second
+  )
+  ```
+</ParamField>
+
+<ParamField path="num_frames" type="int">
+  Exact number of frames to sample from video. Overrides `fps` if set.
+  
+  ```python
+  inputs = processor.apply_chat_template(
+      messages,
+      tokenize=True,
+      return_tensors="pt",
+      num_frames=128,
+      fps=None  # Must set fps=None when using num_frames
+  )
+  ```
+</ParamField>
+
+### Returns
+
+<ResponseField name="input_ids" type="torch.Tensor">
+  Tokenized input text.
+  
+  Shape: `(batch_size, sequence_length)`
+</ResponseField>
+
+<ResponseField name="attention_mask" type="torch.Tensor">
+  Mask indicating which tokens should be attended to.
+  
+  Shape: `(batch_size, sequence_length)`
+</ResponseField>
+
+<ResponseField name="pixel_values" type="torch.Tensor">
+  Preprocessed image data (if images present in messages).
+  
+  Shape: `(num_images, channels, height, width)`
+</ResponseField>
+
+<ResponseField name="video_grid_thw" type="torch.Tensor">
+  Video grid dimensions: temporal, height, width (if videos present).
+</ResponseField>
+
+### Complete Examples
+
+<CodeGroup>
+
+```python Single Image
+from transformers import AutoProcessor
+
+processor = AutoProcessor.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct"
+)
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg"
+            },
+            {"type": "text", "text": "Describe this image."}
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+
+inputs = inputs.to(model.device)
+```
+
+```python Multiple Images
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image1.jpg"},
+            {"type": "image", "image": "file:///path/to/image2.jpg"},
+            {"type": "text", "text": "Compare these images."}
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    add_vision_id=True  # Adds "Picture 1:", "Picture 2:" labels
+)
+```
+
+```python Video Input
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-VL/space_woaudio.mp4"
+            },
+            {"type": "text", "text": "Describe this video."}
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    fps=4  # Sample 4 frames per second
+)
+```
+
+```python Multi-turn Conversation
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image.jpg"},
+            {"type": "text", "text": "What's in this image?"}
+        ]
+    },
+    {
+        "role": "assistant",
+        "content": "I see a cat sitting on a windowsill."
+    },
+    {
+        "role": "user",
+        "content": "What color is the cat?"
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+```
+
+```python Batch Processing
+processor.tokenizer.padding_side = 'left'
+
+messages1 = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image1.jpg"},
+            {"type": "text", "text": "Describe this."}
+        ]
+    }
+]
+
+messages2 = [
+    {
+        "role": "user",
+        "content": [{"type": "text", "text": "Hello!"}]
+    }
+]
+
+messages = [messages1, messages2]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    padding=True  # Required for batching
+)
+```
+
+</CodeGroup>
+
+### Advanced: Controlling Visual Token Budget
+
+Control the number of visual tokens by adjusting pixel budgets:
+
+```python
+processor = AutoProcessor.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct"
+)
+
+# Image processor: 256-1280 visual tokens (32x spatial compression)
+processor.image_processor.size = {
+    "longest_edge": 1280 * 32 * 32,
+    "shortest_edge": 256 * 32 * 32
+}
+
+# Video processor: 256-16384 visual tokens (32x spatial + 2x temporal compression)
+processor.video_processor.size = {
+    "longest_edge": 16384 * 32 * 32 * 2,
+    "shortest_edge": 256 * 32 * 32 * 2
+}
+```
+
+### Notes
+
+<Note>
+**Message Format Requirements:**
+- Each message must have `"role"` (`"user"`, `"assistant"`, or `"system"`)
+- Content can be a string or list of content items
+- Content items must specify `"type"` (`"text"`, `"image"`, or `"video"`)
+</Note>
+
+<Warning>
+For batch generation:
+1. Set `processor.tokenizer.padding_side = 'left'`
+2. Include `padding=True` in `apply_chat_template()`
+</Warning>
+
+<Tip>
+When using `add_vision_id=True`, images and videos are labeled as "Picture 1:", "Picture 2:", "Video 1:", etc. This helps the model reference specific visual inputs in its response.
+</Tip>

@@ -1,0 +1,355 @@
+---
+title: Text Generation
+description: Generate text responses with the model.generate() method
+---
+
+## model.generate()
+
+Generate text completions from image/video inputs and text prompts.
+
+```python
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+```
+
+### Parameters
+
+<ParamField path="inputs" type="dict" required>
+  Model inputs dictionary containing tokenized text and preprocessed images/videos.
+  
+  Typically obtained from `processor.apply_chat_template()` and moved to model device:
+  
+  ```python
+  inputs = processor.apply_chat_template(
+      messages,
+      tokenize=True,
+      add_generation_prompt=True,
+      return_dict=True,
+      return_tensors="pt"
+  )
+  inputs = inputs.to(model.device)
+  
+  generated_ids = model.generate(**inputs, max_new_tokens=128)
+  ```
+</ParamField>
+
+<ParamField path="max_new_tokens" type="int" default="128">
+  Maximum number of new tokens to generate.
+  
+  ```python
+  # Short response
+  generated_ids = model.generate(**inputs, max_new_tokens=128)
+  
+  # Long response
+  generated_ids = model.generate(**inputs, max_new_tokens=2048)
+  ```
+</ParamField>
+
+<ParamField path="temperature" type="float" default="0.7">
+  Sampling temperature. Higher values increase randomness.
+  
+  - `0.1-0.5`: More focused, deterministic outputs
+  - `0.7`: Balanced creativity (default for Instruct models)
+  - `0.6`: Recommended for Thinking models
+  - `1.0+`: More creative, diverse outputs
+  
+  ```python
+  # More deterministic
+  generated_ids = model.generate(**inputs, temperature=0.3, max_new_tokens=128)
+  ```
+</ParamField>
+
+<ParamField path="top_p" type="float" default="0.8">
+  Nucleus sampling threshold. Only tokens with cumulative probability up to `top_p` are considered.
+  
+  - Instruct models: `0.8` (default)
+  - Thinking models: `0.95` (recommended)
+  
+  ```python
+  generated_ids = model.generate(
+      **inputs,
+      temperature=0.7,
+      top_p=0.8,
+      max_new_tokens=128
+  )
+  ```
+</ParamField>
+
+<ParamField path="top_k" type="int" default="20">
+  Top-k sampling. Only the top k most likely tokens are considered.
+  
+  - `20`: Recommended value
+  - `-1`: Disabled (consider all tokens)
+  
+  ```python
+  generated_ids = model.generate(**inputs, top_k=20, max_new_tokens=128)
+  ```
+</ParamField>
+
+<ParamField path="repetition_penalty" type="float" default="1.0">
+  Penalty for repeating tokens. Values > 1.0 discourage repetition.
+  
+  - `1.0`: No penalty (default)
+  - `1.1-1.5`: Light to moderate penalty
+  
+  ```python
+  generated_ids = model.generate(
+      **inputs,
+      repetition_penalty=1.0,
+      max_new_tokens=128
+  )
+  ```
+</ParamField>
+
+<ParamField path="presence_penalty" type="float" default="1.5">
+  Penalty for token presence regardless of frequency.
+  
+  - Instruct models: `1.5` (recommended)
+  - Thinking models: `0.0` (recommended)
+  
+  ```python
+  generated_ids = model.generate(
+      **inputs,
+      presence_penalty=1.5,
+      max_new_tokens=128
+  )
+  ```
+</ParamField>
+
+<ParamField path="do_sample" type="bool" default="True">
+  Whether to use sampling. If `False`, uses greedy decoding.
+  
+  ```python
+  # Greedy decoding (deterministic)
+  generated_ids = model.generate(**inputs, do_sample=False, max_new_tokens=128)
+  
+  # Sampling (with randomness)
+  generated_ids = model.generate(**inputs, do_sample=True, max_new_tokens=128)
+  ```
+</ParamField>
+
+<ParamField path="seed" type="int">
+  Random seed for reproducible generation.
+  
+  - Instruct models: `3407` (official eval)
+  - Thinking models: `1234` (official eval)
+  
+  ```python
+  generated_ids = model.generate(**inputs, seed=42, max_new_tokens=128)
+  ```
+</ParamField>
+
+### Returns
+
+<ResponseField name="generated_ids" type="torch.Tensor">
+  Tensor of token IDs including both input and generated tokens.
+  
+  Shape: `(batch_size, total_sequence_length)`
+  
+  To extract only the newly generated tokens:
+  
+  ```python
+  generated_ids_trimmed = [
+      out_ids[len(in_ids):] 
+      for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+  ]
+  ```
+</ResponseField>
+
+### Decoding Output
+
+Convert generated token IDs to text using the processor:
+
+```python
+output_text = processor.batch_decode(
+    generated_ids_trimmed,
+    skip_special_tokens=True,
+    clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+### Complete Example
+
+<CodeGroup>
+
+```python Single Image
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    dtype="auto",
+    device_map="auto"
+)
+
+processor = AutoProcessor.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct"
+)
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "https://example.com/image.jpg"
+            },
+            {"type": "text", "text": "Describe this image."}
+        ]
+    }
+]
+
+# Prepare inputs
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+# Generate
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+
+# Decode
+generated_ids_trimmed = [
+    out_ids[len(in_ids):]
+    for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed,
+    skip_special_tokens=True,
+    clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+```python Video Input
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "https://example.com/video.mp4"
+            },
+            {"type": "text", "text": "Describe this video."}
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+
+generated_ids_trimmed = [
+    out_ids[len(in_ids):]
+    for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed,
+    skip_special_tokens=True,
+    clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+```python Batch Generation
+# Set padding side to left for batch generation
+processor.tokenizer.padding_side = 'left'
+
+messages1 = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image1.jpg"},
+            {"type": "text", "text": "What is in this image?"}
+        ]
+    }
+]
+
+messages2 = [
+    {
+        "role": "user",
+        "content": [{"type": "text", "text": "Hello, who are you?"}]
+    }
+]
+
+messages = [messages1, messages2]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    padding=True  # Required for batch generation
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+
+generated_ids_trimmed = [
+    out_ids[len(in_ids):]
+    for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed,
+    skip_special_tokens=True,
+    clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+</CodeGroup>
+
+### Recommended Hyperparameters
+
+#### Instruct Models
+
+```python
+generated_ids = model.generate(
+    **inputs,
+    max_new_tokens=32768,
+    temperature=0.7,
+    top_p=0.8,
+    top_k=20,
+    repetition_penalty=1.0,
+    presence_penalty=1.5,
+    do_sample=True,
+    seed=3407
+)
+```
+
+#### Thinking Models
+
+```python
+generated_ids = model.generate(
+    **inputs,
+    max_new_tokens=40960,
+    temperature=0.6,
+    top_p=0.95,
+    top_k=20,
+    repetition_penalty=1.0,
+    presence_penalty=0.0,
+    do_sample=True,
+    seed=1234
+)
+```
+
+### Notes
+
+<Note>
+For batch generation, **always** set `processor.tokenizer.padding_side = 'left'` and include `padding=True` in `apply_chat_template()`.
+</Note>
+
+<Tip>
+The recommended hyperparameters above are used for official benchmark evaluations and provide optimal results for most use cases.
+</Tip>

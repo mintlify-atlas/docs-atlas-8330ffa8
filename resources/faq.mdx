@@ -1,0 +1,535 @@
+---
+title: FAQ
+description: Frequently asked questions about Qwen3-VL models and usage
+---
+
+## General Questions
+
+### What is Qwen3-VL?
+
+Qwen3-VL is the most powerful vision-language model in the Qwen series. It delivers comprehensive upgrades including:
+- Superior text understanding & generation
+- Deeper visual perception & reasoning
+- Extended context length (256K native, expandable to 1M)
+- Enhanced spatial and video dynamics comprehension
+- Stronger agent interaction capabilities
+
+Available in Dense and MoE architectures ranging from 2B to 235B parameters, with both Instruct and Thinking editions.
+
+### What's the difference between Qwen3-VL and Qwen2.5-VL?
+
+Qwen3-VL introduces several architectural improvements:
+
+1. **Interleaved-MRoPE**: Enhanced positional embeddings for better video reasoning
+2. **DeepStack**: Multi-level ViT feature fusion for finer details
+3. **Text-Timestamp Alignment**: Precise temporal modeling for videos
+4. **Improved Capabilities**: Better visual coding, spatial reasoning, OCR (32 languages vs 10)
+5. **Larger Model Sizes**: Up to 235B parameters with MoE architecture
+
+See the [technical paper](https://arxiv.org/pdf/2511.21631) for detailed comparisons.
+
+### Which model should I use?
+
+**For edge/mobile deployment**: Qwen3-VL-2B
+- Smallest footprint
+- Suitable for consumer GPUs
+
+**For balanced performance**: Qwen3-VL-4B or Qwen3-VL-8B
+- Good performance-to-resource ratio
+- RTX 3090/4090, A100 40GB
+
+**For high performance**: Qwen3-VL-32B or Qwen3-VL-30B-A3B
+- Strong capabilities
+- 30B-A3B uses MoE with only 3B active
+
+**For maximum capability**: Qwen3-VL-235B-A22B
+- State-of-the-art performance
+- Requires 8x H100/H200
+
+### Should I use Instruct or Thinking edition?
+
+**Instruct Edition**:
+- General-purpose applications
+- Better instruction following
+- More aligned with human preferences
+- Faster inference
+
+**Thinking Edition**:
+- Complex reasoning tasks
+- STEM and mathematical problems
+- Causal analysis and logical reasoning
+- Provides detailed thought processes
+
+## Model Capabilities
+
+### What visual tasks does Qwen3-VL support?
+
+- **Image Understanding**: Object recognition, scene understanding, visual reasoning
+- **OCR**: 32 languages, robust to blur/tilt/low-light
+- **Document Parsing**: Layout analysis, structure extraction
+- **Object Grounding**: 2D bounding boxes and points, 3D spatial reasoning
+- **Video Understanding**: Long-form video (hours), temporal reasoning, second-level indexing
+- **Visual Coding**: Generate HTML/CSS/JS/Draw.io from screenshots
+- **Agent Tasks**: GUI interaction, tool use on PC/mobile
+- **Spatial Reasoning**: Viewpoint, occlusion, 3D relationships
+
+### What is the maximum context length?
+
+**Default**: 256K tokens
+
+**Extended**: Up to 1M tokens using YaRN scaling
+
+To enable 1M context, modify `config.json`:
+```json
+{
+    "max_position_embeddings": 1000000,
+    "rope_scaling": {
+        "rope_type": "yarn",
+        "mrope_section": [24, 20, 20],
+        "mrope_interleaved": true,
+        "factor": 3.0,
+        "original_max_position_embeddings": 262144
+    }
+}
+```
+
+See [Troubleshooting: Context Length](/resources/troubleshooting#context-length-issues) for details.
+
+### How many images/videos can I process at once?
+
+Qwen3-VL supports multiple images and videos in a single conversation, limited only by context length.
+
+**Example with multiple inputs**:
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/img1.jpg"},
+            {"type": "image", "image": "file:///path/to/img2.jpg"},
+            {"type": "video", "video": "file:///path/to/video.mp4"},
+            {"type": "text", "text": "Compare these images and describe the video."},
+        ],
+    }
+]
+```
+
+Control visual token budget to manage context usage - see [Advanced Usage](/inference/pixel-control).
+
+### What languages does the OCR support?
+
+Qwen3-VL supports OCR in **32 languages** (expanded from 10 in Qwen2.5-VL), including:
+- Major world languages (English, Chinese, Spanish, French, German, etc.)
+- Asian languages (Japanese, Korean, Thai, Vietnamese, etc.)
+- Arabic, Hebrew, Cyrillic scripts
+- Rare and ancient characters
+- Technical jargon and specialized terminology
+
+Robust performance in challenging conditions: blur, tilt, low-light, handwriting.
+
+## Installation & Setup
+
+### What are the minimum requirements?
+
+**Software**:
+- Python 3.8+
+- PyTorch 2.0+
+- Transformers >= 4.57.0
+- CUDA 11.6+ (for GPU)
+
+**Hardware** (varies by model size):
+- Qwen3-VL-2B: 8GB+ VRAM (consumer GPU)
+- Qwen3-VL-8B: 24GB+ VRAM (RTX 3090/4090)
+- Qwen3-VL-32B: 80GB+ VRAM (A100 80GB or multi-GPU)
+- Qwen3-VL-235B-A22B: 8x H100/H200 recommended
+
+See [Troubleshooting: GPU Requirements](/resources/troubleshooting#minimum-vram-requirements).
+
+### How do I install Qwen3-VL?
+
+**Basic installation**:
+```bash
+pip install "transformers>=4.57.0" accelerate qwen-vl-utils
+```
+
+**For video support**:
+```bash
+# Recommended: torchcodec (fastest)
+# See https://github.com/pytorch/torchcodec
+
+# Or: decord (Linux PyPI, others build from source)
+pip install qwen-vl-utils[decord]
+```
+
+**For deployment**:
+```bash
+pip install vllm>=0.11.0  # or sglang
+```
+
+See [Installation Guide](/installation) for details.
+
+### Where can I download the models?
+
+**HuggingFace** (global):
+- [Qwen3-VL Collection](https://huggingface.co/collections/Qwen/qwen3-vl-68d2a7c1b8a8afce4ebd2dbe)
+
+**ModelScope** (optimized for mainland China):
+- [Qwen3-VL Collection](https://modelscope.cn/collections/Qwen3-VL-5c7a94c8cb144b)
+
+**All models** available in:
+- Base precision (BF16/FP16)
+- FP8 quantized (for H100/H200)
+
+See [Model Cards](/resources/model-cards) for complete list.
+
+## Usage
+
+### How do I run inference?
+
+**Basic inference**:
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-8B-Instruct",
+    dtype="auto",
+    device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-8B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "https://example.com/image.jpg"},
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+output = processor.batch_decode(
+    [out[len(inp):] for inp, out in zip(inputs.input_ids, generated_ids)],
+    skip_special_tokens=True
+)
+print(output)
+```
+
+See [Quickstart](/quickstart) for more examples.
+
+### How do I control image/video resolution?
+
+**Method 1: Global settings via processor**
+```python
+# For images
+processor.image_processor.size = {
+    "longest_edge": 1280*32*32,  # max_pixels
+    "shortest_edge": 256*32*32   # min_pixels
+}
+
+# For videos
+processor.video_processor.size = {
+    "longest_edge": 16384*32*32*2,
+    "shortest_edge": 256*32*32*2
+}
+```
+
+**Method 2: Per-input with qwen-vl-utils**
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "path/to/image.jpg",
+                "min_pixels": 50176,
+                "max_pixels": 50176,
+            },
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+```
+
+See [Advanced: Vision Encoder Control](/inference/pixel-control) for details.
+
+### How do I process videos?
+
+**From URL or local path**:
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "https://example.com/video.mp4",
+                "fps": 1.0,  # Sample rate
+                "total_pixels": 20480 * 32 * 32,  # Token budget
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+```
+
+**From image frames**:
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": [
+                    "file:///path/to/frame1.jpg",
+                    "file:///path/to/frame2.jpg",
+                    "file:///path/to/frame3.jpg",
+                ],
+                "sample_fps": 1,
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+```
+
+See [Video Understanding](/capabilities/video-understanding) for examples.
+
+## Deployment
+
+### How do I deploy for production?
+
+**Recommended: vLLM**
+
+```bash
+# Install
+pip install vllm>=0.11.0
+
+# Serve
+vllm serve Qwen/Qwen3-VL-8B-Instruct \
+  --host 0.0.0.0 \
+  --port 8000
+
+# For large models with FP8
+vllm serve Qwen/Qwen3-VL-235B-A22B-Instruct-FP8 \
+  --tensor-parallel-size 8 \
+  --mm-encoder-tp-mode data \
+  --enable-expert-parallel
+```
+
+**Alternative: SGLang**
+```bash
+python -m sglang.launch_server \
+  --model-path Qwen/Qwen3-VL-8B-Instruct \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --tp 4
+```
+
+See [Deployment Guide](/deployment/vllm) for details.
+
+### Can I use the OpenAI API?
+
+Yes! Both vLLM and the official Qwen API support OpenAI-compatible endpoints.
+
+**With vLLM**:
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="EMPTY",
+    base_url="http://localhost:8000/v1"
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-VL-8B-Instruct",
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "https://..."}},
+                {"type": "text", "text": "Describe this image."}
+            ]
+        }
+    ]
+)
+```
+
+**With official API**:
+```python
+client = OpenAI(
+    api_key="YOUR_DASHSCOPE_API_KEY",
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+)
+```
+
+See [API Reference](https://help.aliyun.com/zh/model-studio/developer-reference/qwen-vl-api).
+
+### How do I optimize inference speed?
+
+1. **Use vLLM or SGLang** instead of transformers
+2. **Enable Flash Attention 2**
+   ```python
+   model = AutoModelForImageTextToText.from_pretrained(
+       "Qwen/Qwen3-VL-8B-Instruct",
+       attn_implementation="flash_attention_2"
+   )
+   ```
+3. **Use FP8 quantization** (H100/H200)
+4. **Batch multiple requests**
+5. **Reduce visual token budget** for faster processing
+
+See [Deployment: Performance Optimization](/deployment/optimization).
+
+## Fine-tuning
+
+### Can I fine-tune Qwen3-VL?
+
+Yes! Fine-tuning code is available for Qwen2-VL and Qwen2.5-VL, which is compatible with Qwen3-VL.
+
+**Resources**:
+- [Fine-tuning Code](https://github.com/QwenLM/Qwen2.5-VL/tree/main/qwen-vl-finetune)
+- Released: April 8, 2025
+
+See [Fine-tuning Guide](/fine-tuning/overview) for details.
+
+### What data format is required for fine-tuning?
+
+Qwen3-VL uses a conversational format with support for interleaved image/video/text:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {"type": "image", "image": "path/to/image.jpg"},
+        {"type": "text", "text": "What is in this image?"}
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "This image shows..."
+    }
+  ]
+}
+```
+
+See fine-tuning documentation for detailed format specifications.
+
+### Can I fine-tune on custom visual tasks?
+
+Yes! Qwen3-VL can be fine-tuned for:
+- Custom object detection/grounding
+- Domain-specific OCR
+- Specialized document understanding
+- Custom visual reasoning tasks
+- Agent behaviors
+
+The model's architecture supports various visual understanding tasks.
+
+## Technical Details
+
+### What's the architecture?
+
+Qwen3-VL introduces three key innovations:
+
+1. **Interleaved-MRoPE**: Multi-resolution positional embeddings across time, width, and height
+2. **DeepStack**: Multi-level ViT feature fusion for fine-grained details
+3. **Text-Timestamp Alignment**: Precise temporal grounding beyond T-RoPE
+
+Built on transformer architecture with vision encoder + language model.
+
+See [technical paper](https://arxiv.org/pdf/2511.21631) for details.
+
+### What is the patch size?
+
+- **Qwen3-VL**: 16×16 pixels
+- **Qwen2.5-VL**: 14×14 pixels
+
+This affects visual token calculation and `qwen-vl-utils` usage:
+```python
+images, videos = process_vision_info(messages, image_patch_size=16)
+```
+
+### How are visual tokens calculated?
+
+**For images**:
+- Spatial compression: 32× (16×16 patches → merged)
+- Tokens ≈ (height × width) / (32 × 32)
+
+**For videos**:
+- Spatial compression: 32×
+- Temporal compression: 2×
+- Tokens ≈ (frames × height × width) / (32 × 32 × 2)
+
+Control via `min_pixels`, `max_pixels`, `total_pixels` parameters.
+
+## Community & Support
+
+### Where can I get help?
+
+1. **Documentation**: You're reading it!
+2. **GitHub Issues**: [Qwen3-VL Issues](https://github.com/QwenLM/Qwen3-VL/issues)
+3. **Discord**: [Join server](https://discord.gg/CV4E9rpNSD)
+4. **WeChat**: [QR code](https://github.com/QwenLM/Qwen/blob/main/assets/wechat.png)
+5. **Troubleshooting**: [Common issues](/resources/troubleshooting)
+
+### How do I report a bug?
+
+1. Check [existing issues](https://github.com/QwenLM/Qwen3-VL/issues)
+2. Review [troubleshooting guide](/resources/troubleshooting)
+3. Create new issue with:
+   - Model version and size
+   - Environment (OS, Python, CUDA, library versions)
+   - Minimal reproducible example
+   - Error messages and logs
+
+### Where can I find examples?
+
+**Cookbooks** (Jupyter notebooks):
+- [Omni Recognition](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/omni_recognition.ipynb)
+- [Document Parsing](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/document_parsing.ipynb)
+- [2D/3D Grounding](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/2d_grounding.ipynb)
+- [OCR & Key Information Extraction](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/ocr.ipynb)
+- [Video Understanding](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/video_understanding.ipynb)
+- [Mobile/Computer Agent](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/mobile_agent.ipynb)
+- [Visual Coding](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/mmcode.ipynb)
+- And more in the [cookbooks directory](https://github.com/QwenLM/Qwen3-VL/tree/main/cookbooks)
+
+See [Capabilities Overview](/capabilities/overview) for links.
+
+## License & Citation
+
+### What is the license?
+
+Qwen3-VL models are released under permissive licenses allowing commercial use. Check individual model cards on HuggingFace for specific license details.
+
+### How do I cite Qwen3-VL?
+
+```bibtex
+@article{Qwen3-VL,
+  title={Qwen3-VL Technical Report},
+  author={Qwen Team},
+  journal={arXiv preprint arXiv:2511.21631},
+  year={2025}
+}
+```
+
+Paper: [https://arxiv.org/pdf/2511.21631](https://arxiv.org/pdf/2511.21631)
+
+## Related Resources
+
+- [Model Cards](/resources/model-cards)
+- [Benchmarks](/resources/benchmarks)
+- [Troubleshooting](/resources/troubleshooting)
+- [Changelog](/resources/changelog)
+- [Installation](/installation)
+- [Quickstart](/quickstart)

@@ -1,0 +1,322 @@
+---
+title: Changelog
+description: Release history and updates for Qwen3-VL
+---
+
+## 2025
+
+### November 27, 2025 - Technical Paper Release
+
+**Qwen3-VL Technical Paper Published**
+
+We released the [Qwen3-VL technical paper](https://arxiv.org/pdf/2511.21631), providing comprehensive technical details about the model architecture, training methodology, and evaluation results.
+
+**Key Topics Covered**:
+- Interleaved-MRoPE architecture
+- DeepStack multi-level feature fusion
+- Text-Timestamp alignment for videos
+- Training data and methodology
+- Comprehensive benchmark evaluations
+- Ablation studies
+
+**Resources**:
+- Paper: [arXiv:2511.21631](https://arxiv.org/pdf/2511.21631)
+- Blog: [Qwen AI Blog](https://qwen.ai/blog?id=99f0335c4ad9ff6153e517418d48535ab6d8afef&from=research.latest-advancements-list)
+
+---
+
+### October 21, 2025 - Qwen3-VL 2B & 32B Models
+
+**New Model Releases**
+
+Released four new models expanding the Qwen3-VL family:
+- **Qwen3-VL-2B-Instruct** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct))
+- **Qwen3-VL-2B-Thinking** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-2B-Thinking))
+- **Qwen3-VL-32B-Instruct** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-32B-Instruct))
+- **Qwen3-VL-32B-Thinking** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-32B-Thinking))
+
+**Highlights**:
+- 2B models suitable for edge deployment and consumer GPUs
+- 32B models provide high performance with reasonable resource requirements
+- Both Instruct and Thinking editions available
+- Available on both HuggingFace and ModelScope
+
+---
+
+### October 15, 2025 - Qwen3-VL 4B & 8B Models
+
+**New Model Releases**
+
+Released four new models in the mid-size range:
+- **Qwen3-VL-4B-Instruct** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct))
+- **Qwen3-VL-4B-Thinking** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-4B-Thinking))
+- **Qwen3-VL-8B-Instruct** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct))
+- **Qwen3-VL-8B-Thinking** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-8B-Thinking))
+
+**Highlights**:
+- Balanced performance-to-resource ratio
+- 4B suitable for RTX 3090/4090 GPUs
+- 8B provides strong capabilities for professional use
+- Both editions support full feature set
+
+---
+
+### October 4, 2025 - MoE Models & FP8 Quantization
+
+**Qwen3-VL-30B-A3B Release**
+
+Released our first Mixture-of-Experts (MoE) models:
+- **Qwen3-VL-30B-A3B-Instruct** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct))
+- **Qwen3-VL-30B-A3B-Thinking** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Thinking))
+
+**FP8 Quantized Models**
+
+Released FP8 quantized versions of all Qwen3-VL models for efficient deployment on H100/H200 GPUs.
+
+**Features**:
+- 30B total parameters, 3B active per token
+- Efficient inference with MoE architecture
+- FP8 models available in collections:
+  - [HuggingFace Collection](https://huggingface.co/collections/Qwen/qwen3-vl-68d2a7c1b8a8afce4ebd2dbe)
+  - [ModelScope Collection](https://modelscope.cn/collections/Qwen3-VL-5c7a94c8cb144b)
+
+---
+
+### September 23, 2025 - Qwen3-VL 235B Launch
+
+**Qwen3-VL-235B-A22B Release**
+
+Released the flagship Qwen3-VL models:
+- **Qwen3-VL-235B-A22B-Instruct** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct))
+- **Qwen3-VL-235B-A22B-Thinking** ([HuggingFace](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Thinking))
+
+**Major Features**:
+- State-of-the-art vision-language performance
+- 235B parameters, 22B active (MoE)
+- Native 256K context, expandable to 1M
+- Advanced capabilities:
+  - Visual agent (PC/mobile GUI interaction)
+  - Visual coding (Draw.io, HTML/CSS/JS)
+  - 3D grounding and spatial reasoning
+  - Enhanced video understanding
+  - 32-language OCR
+  - Superior multimodal reasoning
+
+**Blog**: [Official announcement](https://qwen.ai/blog?id=99f0335c4ad9ff6153e517418d48535ab6d8afef&from=research.latest-advancements-list)
+
+---
+
+### April 8, 2025 - Fine-tuning Code Release
+
+**Fine-tuning Support**
+
+Released fine-tuning code for Qwen2-VL and Qwen2.5-VL, compatible with Qwen3-VL.
+
+**Resources**:
+- Code: [qwen-vl-finetune](https://github.com/QwenLM/Qwen2.5-VL/tree/main/qwen-vl-finetune)
+- Supports custom visual tasks
+- LoRA and full fine-tuning
+
+---
+
+### March 25, 2025 - Qwen2.5-VL-32B
+
+**Qwen2.5-VL-32B-Instruct Release**
+
+Released [Qwen2.5-VL-32B-Instruct](https://huggingface.co/Qwen/Qwen2.5-VL-32B-Instruct).
+
+**Improvements**:
+- Smarter responses
+- Better human preference alignment
+- Enhanced reasoning capabilities
+
+**Blog**: [Announcement](https://qwenlm.github.io/blog/qwen2.5-vl-32b/)
+
+---
+
+### February 20, 2025 - Qwen2.5-VL Technical Report
+
+**Technical Report & AWQ Models**
+
+Released the [Qwen2.5-VL Technical Report](https://arxiv.org/abs/2502.13923) along with AWQ-quantized models:
+- [Qwen2.5-VL-3B-Instruct-AWQ](https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct-AWQ)
+- [Qwen2.5-VL-7B-Instruct-AWQ](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct-AWQ)
+- [Qwen2.5-VL-72B-Instruct-AWQ](https://huggingface.co/Qwen/Qwen2.5-VL-72B-Instruct-AWQ)
+
+---
+
+### January 28, 2025 - Qwen2.5-VL Series
+
+**Qwen2.5-VL Family Release**
+
+Released the complete Qwen2.5-VL series on [HuggingFace](https://huggingface.co/Qwen).
+
+**Models**:
+- Qwen2.5-VL-3B-Instruct
+- Qwen2.5-VL-7B-Instruct
+- Qwen2.5-VL-72B-Instruct
+
+**Blog**: [Announcement](https://qwenlm.github.io/blog/qwen2.5-vl/)
+
+---
+
+## 2024
+
+### December 25, 2024 - QvQ-72B-Preview
+
+**Visual Reasoning Research Model**
+
+Released [QvQ-72B-Preview](https://huggingface.co/Qwen/QVQ-72B-Preview), an experimental model focusing on enhanced visual reasoning.
+
+**Features**:
+- 72B parameters
+- Advanced visual reasoning capabilities
+- Research preview for community feedback
+
+**Blog**: [QvQ announcement](https://qwenlm.github.io/blog/qvq-72b-preview/)
+
+---
+
+### September 19, 2024 - Qwen2-VL-72B
+
+**Large Model & Quantization**
+
+Released Qwen2-VL-72B-Instruct with multiple quantized versions:
+- [Qwen2-VL-72B-Instruct](https://huggingface.co/Qwen/Qwen2-VL-72B-Instruct)
+- [Qwen2-VL-72B-Instruct-AWQ](https://huggingface.co/Qwen/Qwen2-VL-72B-Instruct-AWQ)
+- [Qwen2-VL-72B-Instruct-GPTQ-Int4](https://huggingface.co/Qwen/Qwen2-VL-72B-Instruct-GPTQ-Int4)
+- [Qwen2-VL-72B-Instruct-GPTQ-Int8](https://huggingface.co/Qwen/Qwen2-VL-72B-Instruct-GPTQ-Int8)
+
+**Qwen2-VL Paper**
+
+Published [Qwen2-VL technical paper](https://arxiv.org/pdf/2409.12191).
+
+---
+
+### August 30, 2024 - Qwen2-VL Series Launch
+
+**Qwen2-VL Family Release**
+
+Released the Qwen2-VL series:
+- Qwen2-VL-2B-Instruct
+- Qwen2-VL-7B-Instruct
+- (72B announced, released later)
+
+**Features**:
+- Multi-resolution image understanding
+- Video support
+- Enhanced OCR
+- Improved multimodal reasoning
+
+**Collection**: [Qwen2-VL](https://huggingface.co/collections/Qwen/qwen2-vl-66cee7455501d7126940800d)
+
+**Blog**: [Qwen2-VL announcement](https://qwenlm.github.io/blog/qwen2-vl/)
+
+---
+
+## Release Timeline Summary
+
+| Date | Release | Highlights |
+|------|---------|------------|
+| 2025-11-27 | Technical Paper | Architectural details and evaluations |
+| 2025-10-21 | 2B & 32B Models | Edge to high-performance range |
+| 2025-10-15 | 4B & 8B Models | Mid-range balanced performance |
+| 2025-10-04 | 30B-A3B MoE & FP8 | Efficient MoE, quantized models |
+| 2025-09-23 | 235B-A22B Flagship | State-of-the-art VLM |
+| 2025-04-08 | Fine-tuning Code | Custom training support |
+| 2025-03-25 | Qwen2.5-VL-32B | Improved alignment |
+| 2025-02-20 | Qwen2.5-VL Report & AWQ | Technical documentation |
+| 2025-01-28 | Qwen2.5-VL Series | Complete model family |
+| 2024-12-25 | QvQ-72B Preview | Visual reasoning research |
+| 2024-09-19 | Qwen2-VL-72B & Paper | Large model & documentation |
+| 2024-08-30 | Qwen2-VL Launch | Series introduction |
+
+## Migration Guides
+
+### From Qwen2.5-VL to Qwen3-VL
+
+**Key Changes**:
+1. **Patch size**: 14 → 16
+   ```python
+   # Update qwen-vl-utils calls
+   process_vision_info(messages, image_patch_size=16)  # was 14
+   ```
+
+2. **Video metadata**: New return format
+   ```python
+   images, videos, video_kwargs = process_vision_info(
+       messages,
+       image_patch_size=16,
+       return_video_kwargs=True,
+       return_video_metadata=True  # New for Qwen3-VL
+   )
+   ```
+
+3. **Architecture improvements**: Interleaved-MRoPE, DeepStack, Text-Timestamp alignment
+
+4. **New capabilities**:
+   - 3D grounding
+   - Enhanced visual coding
+   - Better spatial reasoning
+   - Extended OCR (32 languages)
+
+**Compatibility**: Most Qwen2.5-VL code works with minimal changes.
+
+### From Qwen2-VL to Qwen3-VL
+
+**Major Updates**:
+- Significantly improved performance across all tasks
+- Native long context (256K vs 32K)
+- Video understanding enhancements
+- New architectures (MoE, Thinking editions)
+- Broader model size range (2B-235B)
+
+## Future Roadmap
+
+<Note>
+The following items are planned but subject to change:
+</Note>
+
+- Additional model sizes and variants
+- Enhanced fine-tuning tools and examples
+- More cookbook examples and tutorials
+- Extended language support for OCR
+- Performance optimizations
+- Community-contributed extensions
+
+## Resources
+
+### Documentation
+- [Installation Guide](/installation)
+- [Quickstart](/quickstart)
+- [Model Cards](/resources/model-cards)
+- [Benchmarks](/resources/benchmarks)
+
+### Code & Models
+- [GitHub Repository](https://github.com/QwenLM/Qwen3-VL)
+- [HuggingFace Collection](https://huggingface.co/collections/Qwen/qwen3-vl-68d2a7c1b8a8afce4ebd2dbe)
+- [ModelScope Collection](https://modelscope.cn/collections/Qwen3-VL-5c7a94c8cb144b)
+- [Cookbooks](https://github.com/QwenLM/Qwen3-VL/tree/main/cookbooks)
+
+### Papers
+- [Qwen3-VL Technical Report](https://arxiv.org/pdf/2511.21631) (2025)
+- [Qwen2.5-VL Technical Report](https://arxiv.org/abs/2502.13923) (2025)
+- [Qwen2-VL Paper](https://arxiv.org/pdf/2409.12191) (2024)
+
+### Community
+- [Discord](https://discord.gg/CV4E9rpNSD)
+- [WeChat Group](https://github.com/QwenLM/Qwen/blob/main/assets/wechat.png)
+- [GitHub Discussions](https://github.com/QwenLM/Qwen3-VL/discussions)
+
+## Citation
+
+If you use Qwen3-VL in your research, please cite:
+
+```bibtex
+@article{Qwen3-VL,
+  title={Qwen3-VL Technical Report},
+  author={Qwen Team},
+  journal={arXiv preprint arXiv:2511.21631},
+  year={2025}
+}
+```

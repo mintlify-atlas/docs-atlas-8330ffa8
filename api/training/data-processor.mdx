@@ -1,0 +1,368 @@
+---
+title: "Data Processor"
+description: "Vision-language data processing, dataset loading, and collation for Qwen-VL fine-tuning"
+---
+
+## Overview
+
+The data processor module provides classes and functions for handling vision-language training data, including dataset loading, preprocessing, packing, and batching for Qwen-VL models.
+
+## Constants
+
+<ParamField path="IGNORE_INDEX" type="int" default="-100">
+  Label value used to ignore tokens during loss calculation.
+</ParamField>
+
+<ParamField path="IMAGE_TOKEN_INDEX" type="int" default="151655">
+  Token ID representing image placeholders in the vocabulary.
+</ParamField>
+
+<ParamField path="VIDEO_TOKEN_INDEX" type="int" default="151656">
+  Token ID representing video placeholders in the vocabulary.
+</ParamField>
+
+<ParamField path="DEFAULT_IMAGE_TOKEN" type="str" default="<image>">
+  Text placeholder for images in conversation data.
+</ParamField>
+
+<ParamField path="DEFAULT_VIDEO_TOKEN" type="str" default="<video>">
+  Text placeholder for videos in conversation data.
+</ParamField>
+
+## LazySupervisedDataset
+
+Dataset class for lazy loading of vision-language training data.
+
+### Constructor
+
+```python
+LazySupervisedDataset(processor, data_args)
+```
+
+<ParamField path="processor" type="ProcessorMixin" required>
+  Qwen-VL processor containing tokenizer, image processor, and video processor.
+</ParamField>
+
+<ParamField path="data_args" type="DataArguments" required>
+  Data configuration including dataset names, pixel limits, and video parameters.
+</ParamField>
+
+### Properties
+
+<ParamField path="lengths" type="list[int]">
+  Approximate token length for each sample (text tokens + 128 per image).
+</ParamField>
+
+<ParamField path="modality_lengths" type="list[int]">
+  Token lengths with modality information. Positive for multimodal samples, negative for text-only.
+</ParamField>
+
+<ParamField path="pre_calculated_length" type="np.ndarray">
+  Pre-calculated token lengths if available in dataset metadata, otherwise returns array of ones.
+</ParamField>
+
+### Methods
+
+#### `__getitem__(i)`
+
+Retrieves a single training sample with retry logic.
+
+<ParamField path="i" type="int" required>
+  Sample index.
+</ParamField>
+
+**Returns:** Dictionary containing:
+- `input_ids` - Tokenized input sequence
+- `labels` - Target labels with IGNORE_INDEX for non-answer tokens
+- `position_ids` - 3D position IDs for RoPE
+- `attention_mask` - Sequence length for Flash Attention
+- `pixel_values` - Image pixel tensors (if images present)
+- `image_grid_thw` - Image grid dimensions (time, height, width)
+- `pixel_values_videos` - Video pixel tensors (if videos present)
+- `video_grid_thw` - Video grid dimensions
+
+**Retry Logic:**
+- 3 attempts on the current sample
+- 3 attempts on the next sample if current fails
+- Raises exception if all retries fail
+
+## Utility Functions
+
+### `update_processor_pixels()`
+
+Updates processor image and video resolution parameters.
+
+```python
+update_processor_pixels(processor, data_args)
+```
+
+<ParamField path="processor" type="ProcessorMixin" required>
+  Processor to update.
+</ParamField>
+
+<ParamField path="data_args" type="DataArguments" required>
+  Data arguments containing pixel and frame limits.
+</ParamField>
+
+**Updates:**
+- Image processor: `min_pixels`, `max_pixels`
+- Video processor: `min_pixels`, `max_pixels`, `min_frames`, `max_frames`, `fps`
+
+**Returns:** Updated processor instance.
+
+### `preprocess_qwen_visual()`
+
+Preprocesses vision-language data into model inputs.
+
+```python
+preprocess_qwen_visual(sources, processor)
+```
+
+<ParamField path="sources" type="list[dict]" required>
+  List containing a single data sample with:
+  - `conversations` - List of conversation turns
+  - `image` - Image path(s) or list of paths
+  - `video` - Video path(s) or list of paths
+  - `data_path` - Base directory path
+</ParamField>
+
+<ParamField path="processor" type="ProcessorMixin" required>
+  Qwen-VL processor for tokenization and vision processing.
+</ParamField>
+
+**Returns:** Dictionary with:
+- `input_ids` - Tokenized sequences
+- `labels` - Labels with assistant responses marked
+- `pixel_values`, `image_grid_thw` - Image data
+- `pixel_values_videos`, `video_grid_thw` - Video data
+
+### `read_jsonl()`
+
+Reads JSONL format annotation files.
+
+```python
+read_jsonl(path)
+```
+
+<ParamField path="path" type="str" required>
+  Path to JSONL file.
+</ParamField>
+
+**Returns:** List of parsed JSON objects.
+
+## Data Collators
+
+### DataCollatorForSupervisedDataset
+
+Collates batches for standard training.
+
+```python
+@dataclass
+class DataCollatorForSupervisedDataset:
+    tokenizer: transformers.PreTrainedTokenizer
+```
+
+<ParamField path="tokenizer" type="PreTrainedTokenizer" required>
+  Tokenizer for padding configuration.
+</ParamField>
+
+**Collation Process:**
+1. Pads `input_ids` and `labels` to batch max length
+2. Truncates sequences to `model_max_length`
+3. Concatenates all images and videos across batch
+4. Concatenates grid dimension tensors
+5. Creates attention mask from padding
+
+**Returns:** Batch dictionary with:
+- `input_ids` - Padded input sequences
+- `labels` - Padded labels
+- `attention_mask` - Padding mask
+- `position_ids` - 3D position IDs
+- `pixel_values` - Concatenated images
+- `image_grid_thw` - Image grid dimensions
+- `pixel_values_videos` - Concatenated videos
+- `video_grid_thw` - Video grid dimensions
+
+### FlattenedDataCollatorForSupervisedDataset
+
+Collates batches for packed/flattened training.
+
+```python
+@dataclass
+class FlattenedDataCollatorForSupervisedDataset(DataCollatorForSupervisedDataset):
+    tokenizer: transformers.PreTrainedTokenizer
+```
+
+**Differences from standard collator:**
+- Concatenates sequences without padding between samples
+- Uses cumulative sequence length tensor for attention mask
+- Optimized for Flash Attention variable-length inputs
+- Maximizes GPU utilization by eliminating padding
+
+**Returns:** Batch with:
+- `attention_mask` - Cumulative sequence length indices (for Flash Attention)
+- Other fields same as standard collator
+
+## Dataset Factory
+
+### `make_supervised_data_module()`
+
+Creates dataset and collator for training.
+
+```python
+make_supervised_data_module(processor, data_args)
+```
+
+<ParamField path="processor" type="ProcessorMixin" required>
+  Qwen-VL processor instance.
+</ParamField>
+
+<ParamField path="data_args" type="DataArguments" required>
+  Data configuration arguments.
+</ParamField>
+
+**Returns:** Dictionary with:
+- `train_dataset` - `LazySupervisedDataset` instance
+- `eval_dataset` - `None` (evaluation not implemented)
+- `data_collator` - `FlattenedDataCollatorForSupervisedDataset` if packing/flatten enabled, otherwise `DataCollatorForSupervisedDataset`
+
+## Data Format
+
+### Conversation Format
+
+Dataset annotations should follow this structure:
+
+```json
+{
+  "image": "path/to/image.jpg",
+  "conversations": [
+    {
+      "from": "human",
+      "value": "<image>\nWhat is in this image?"
+    },
+    {
+      "from": "gpt",
+      "value": "The image shows a cat sitting on a windowsill."
+    }
+  ]
+}
+```
+
+### Multi-Image Example
+
+```json
+{
+  "image": ["image1.jpg", "image2.jpg"],
+  "conversations": [
+    {
+      "from": "human",
+      "value": "<image>\nDescribe the first image.\n<image>\nNow describe the second."
+    },
+    {
+      "from": "gpt",
+      "value": "First image: A mountain landscape. Second image: An ocean sunset."
+    }
+  ]
+}
+```
+
+### Video Example
+
+```json
+{
+  "video": "path/to/video.mp4",
+  "conversations": [
+    {
+      "from": "human",
+      "value": "<video>\nWhat is happening in this video?"
+    },
+    {
+      "from": "gpt",
+      "value": "A person is riding a bicycle through a park."
+    }
+  ]
+}
+```
+
+## Usage Example
+
+```python
+from transformers import AutoProcessor
+from qwenvl.train.argument import DataArguments
+from qwenvl.data.data_processor import make_supervised_data_module
+
+# Load processor
+processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-7B-Instruct")
+
+# Configure data
+data_args = DataArguments(
+    dataset_use="custom_vqa,coco_caption",
+    data_packing=True,
+    data_flatten=True,
+    max_pixels=28 * 28 * 768,
+    min_pixels=28 * 28 * 16,
+    video_max_frames=8,
+    video_fps=2.0
+)
+
+# Create data module
+data_module = make_supervised_data_module(processor, data_args)
+
+# Access components
+train_dataset = data_module["train_dataset"]
+data_collator = data_module["data_collator"]
+
+print(f"Dataset size: {len(train_dataset)}")
+print(f"First sample keys: {train_dataset[0].keys()}")
+```
+
+## Advanced Features
+
+### Data Packing
+
+When `data_packing=True`, multiple training examples are packed into single sequences:
+
+```python
+data_args = DataArguments(
+    dataset_use="my_dataset",
+    data_packing=True,      # Enable packing
+    data_flatten=True,      # Use flattened collator
+)
+```
+
+Benefits:
+- Reduces padding overhead
+- Improves GPU utilization
+- Increases effective batch size
+- Requires Flash Attention for variable-length support
+
+### Custom Dataset Registration
+
+Register custom datasets in `data_list.py`:
+
+```python
+def data_list(dataset_names):
+    datasets = {
+        "my_vqa": {
+            "annotation_path": "/path/to/annotations.jsonl",
+            "data_path": "/path/to/images",
+            "sampling_rate": 1.0  # Use 100% of data
+        },
+        "my_caption": {
+            "annotation_path": "/path/to/captions.json",
+            "data_path": "/path/to/images",
+            "sampling_rate": 0.5  # Use 50% of data
+        }
+    }
+    return [datasets[name] for name in dataset_names]
+```
+
+### Position IDs for RoPE
+
+The dataset generates 3D rotary position embeddings using model-specific functions:
+
+- `get_rope_index_2()` - Qwen2-VL models
+- `get_rope_index_25()` - Qwen2.5-VL models  
+- `get_rope_index_3()` - Qwen3-VL models
+
+These handle the complex position encoding required for vision-language inputs with variable-resolution images and videos.

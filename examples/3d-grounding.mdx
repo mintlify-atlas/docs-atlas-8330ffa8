@@ -1,0 +1,66 @@
+---
+title: 3D Object Grounding
+description: Accurate 3D bounding boxes for indoor and outdoor objects
+---
+
+Qwen3-VL introduces advanced 3D grounding capabilities, providing accurate 3D bounding boxes for both indoor and outdoor objects. This enables spatial reasoning and supports embodied AI applications.
+
+## Capability Overview
+
+The 3D grounding feature enables you to:
+- Generate accurate 3D bounding boxes
+- Handle both indoor and outdoor scenes
+- Support spatial reasoning tasks
+- Enable embodied AI applications
+- Understand depth and spatial relationships
+- Provide position, viewpoint, and occlusion information
+
+## Example Usage
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", dtype="auto", device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "path/to/scene.jpg",
+            },
+            {"type": "text", "text": "Provide 3D bounding boxes for the objects in this scene."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=512)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Try it Yourself
+
+Explore the full 3D grounding cookbook with interactive examples:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/3d_grounding.ipynb)
+
+[View on GitHub](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/3d_grounding.ipynb)

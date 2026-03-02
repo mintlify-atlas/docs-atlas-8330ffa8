@@ -1,0 +1,165 @@
+---
+title: Model Loading
+description: Load Qwen3-VL models with AutoModelForImageTextToText
+---
+
+## AutoModelForImageTextToText.from_pretrained
+
+Load a Qwen3-VL model from a pretrained checkpoint using the Transformers library.
+
+```python
+from transformers import AutoModelForImageTextToText
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    dtype="auto",
+    device_map="auto"
+)
+```
+
+### Parameters
+
+<ParamField path="pretrained_model_name_or_path" type="string" required>
+  Model identifier from Hugging Face Hub or local path to model directory.
+  
+  Examples:
+  - `"Qwen/Qwen3-VL-235B-A22B-Instruct"`
+  - `"Qwen/Qwen3-VL-30B-A3B-Instruct"`
+  - `"Qwen/Qwen3-VL-32B-Instruct"`
+  - `"Qwen/Qwen3-VL-8B-Instruct"`
+  - `"Qwen/Qwen3-VL-4B-Instruct"`
+  - `"Qwen/Qwen3-VL-2B-Instruct"`
+</ParamField>
+
+<ParamField path="dtype" type="string | torch.dtype" default="auto">
+  Data type for model weights. Controls precision and memory usage.
+  
+  Options:
+  - `"auto"` - Automatically select optimal dtype
+  - `torch.bfloat16` - Brain floating point 16-bit (recommended)
+  - `torch.float16` - Half precision floating point
+  - `torch.float32` - Full precision floating point
+  
+  ```python
+  import torch
+  
+  model = AutoModelForImageTextToText.from_pretrained(
+      "Qwen/Qwen3-VL-235B-A22B-Instruct",
+      dtype=torch.bfloat16
+  )
+  ```
+</ParamField>
+
+<ParamField path="device_map" type="string | dict" default="auto">
+  Device allocation strategy for model layers. Enables multi-GPU and CPU offloading.
+  
+  Options:
+  - `"auto"` - Automatically distribute across available devices
+  - `"cuda"` - Load entire model on single GPU
+  - `"cpu"` - Load model on CPU
+  - Custom dict mapping layers to devices
+  
+  ```python
+  # Automatic device distribution
+  model = AutoModelForImageTextToText.from_pretrained(
+      "Qwen/Qwen3-VL-235B-A22B-Instruct",
+      device_map="auto"
+  )
+  ```
+</ParamField>
+
+<ParamField path="attn_implementation" type="string">
+  Attention mechanism implementation. Use Flash Attention 2 for better performance.
+  
+  Options:
+  - `"flash_attention_2"` - Fast and memory-efficient attention (recommended)
+  - `"eager"` - Standard PyTorch attention
+  - `"sdpa"` - Scaled dot-product attention
+  
+  **Requirements for Flash Attention 2:**
+  - Compatible GPU (Ampere, Ada, Hopper architecture)
+  - dtype must be `torch.float16` or `torch.bfloat16`
+  - Install: `pip install -U flash-attn --no-build-isolation`
+  
+  ```python
+  import torch
+  
+  model = AutoModelForImageTextToText.from_pretrained(
+      "Qwen/Qwen3-VL-235B-A22B-Instruct",
+      dtype=torch.bfloat16,
+      attn_implementation="flash_attention_2",
+      device_map="auto"
+  )
+  ```
+</ParamField>
+
+### Returns
+
+Returns a `Qwen3VLForConditionalGeneration` model instance ready for inference.
+
+### Example Usage
+
+<CodeGroup>
+
+```python Default Loading
+from transformers import AutoModelForImageTextToText
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    dtype="auto",
+    device_map="auto"
+)
+```
+
+```python With Flash Attention 2
+import torch
+from transformers import AutoModelForImageTextToText
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2",
+    device_map="auto"
+)
+```
+
+```python Specific Device
+import torch
+from transformers import AutoModelForImageTextToText
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-8B-Instruct",
+    dtype=torch.bfloat16,
+    device_map="cuda:0"
+)
+```
+
+</CodeGroup>
+
+### Notes
+
+<Note>
+For multi-image and video scenarios, Flash Attention 2 is **strongly recommended** for better acceleration and memory efficiency.
+</Note>
+
+<Warning>
+Qwen3-VL requires `transformers>=4.57.0`. Install with:
+```bash
+pip install "transformers>=4.57.0"
+```
+</Warning>
+
+### Memory Requirements
+
+Model memory usage varies by precision:
+
+| Model Size | BF16 | FP16 | INT8 | INT4 |
+|-----------|------|------|------|------|
+| 2B | ~4 GB | ~4 GB | ~2 GB | ~1 GB |
+| 8B | ~16 GB | ~16 GB | ~8 GB | ~4 GB |
+| 32B | ~64 GB | ~64 GB | ~32 GB | ~16 GB |
+| 235B-A22B | ~264 GB | ~264 GB | ~132 GB | ~66 GB |
+
+<Tip>
+Actual memory usage is typically 1.2x higher than theoretical minimum due to inference overhead.
+</Tip>

@@ -1,0 +1,66 @@
+---
+title: Omni Recognition
+description: Recognize animals, plants, people, scenic spots, cars, merchandise, and various objects
+---
+
+Qwen3-VL excels at recognizing a wide variety of objects beyond basic image classification. The model can identify animals, plants, people, celebrities, scenic spots, cars, merchandise, and many other object types with high accuracy.
+
+## Capability Overview
+
+The omni recognition capability enables you to:
+- Identify animals, plants, and natural objects
+- Recognize people, celebrities, and anime characters
+- Detect products, merchandise, and commercial items
+- Identify landmarks, scenic spots, and locations
+- Recognize vehicles, cars, and transportation
+- Classify flora, fauna, and various objects
+
+## Example Usage
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", dtype="auto", device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "path/to/your/image.jpg",
+            },
+            {"type": "text", "text": "What objects do you see in this image?"},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Try it Yourself
+
+Explore the full omni recognition cookbook with interactive examples:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/omni_recognition.ipynb)
+
+[View on GitHub](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/omni_recognition.ipynb)

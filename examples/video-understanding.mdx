@@ -1,0 +1,66 @@
+---
+title: Video Understanding
+description: Advanced video OCR, long video understanding, and temporal video grounding
+---
+
+Qwen3-VL excels at video understanding with enhanced capabilities for video OCR, long video comprehension, and temporal grounding. The model can process hours-long videos with full recall and second-level indexing.
+
+## Capability Overview
+
+The video understanding feature enables you to:
+- Perform video OCR and text extraction
+- Understand long videos (hours-long content)
+- Achieve second-level temporal indexing
+- Perform video grounding and localization
+- Extract events and actions from videos
+- Handle 256K context natively, expandable to 1M
+
+## Example Usage
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", dtype="auto", device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-VL/space_woaudio.mp4",
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=512)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Try it Yourself
+
+Explore the full video understanding cookbook with interactive examples:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/video_understanding.ipynb)
+
+[View on GitHub](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/video_understanding.ipynb)

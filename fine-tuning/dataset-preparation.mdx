@@ -1,0 +1,220 @@
+---
+title: Dataset Preparation
+description: Format your training data for Qwen3-VL fine-tuning
+---
+
+## JSON Data Structure
+
+All training data must follow a standardized JSON format with the following components:
+
+### Required Fields
+
+- **Media field**: Either `image` or `video` containing the path to media files
+- **conversations**: An array of conversation turns with `from` and `value` fields
+
+### Media Tags
+
+Use special tokens in prompts to indicate media placement:
+- `<image>` for image understanding tasks
+- `<video>` for video understanding tasks
+
+<Warning>
+**Important formatting rules:**
+- One `<image>` tag must correspond to exactly one image file
+- Similarly, `<video>` tags must correspond to video files  
+- These special tokens should NOT appear in the answer text
+</Warning>
+
+## Example Formats
+
+### Single Image Example
+
+Basic single-image question-answering format:
+
+```json
+{
+    "image": "images/001.jpg",
+    "conversations": [
+        {
+            "from": "human",
+            "value": "<image>\nWhat's the main object in this picture?"
+        },
+        {
+            "from": "gpt",
+            "value": "A red apple on a wooden table"
+        }
+    ]
+}
+```
+
+### Multi-Image Example
+
+For tasks requiring comparison or reasoning across multiple images:
+
+```json
+{
+    "image": ["cats/001.jpg", "cats/002.jpg"],
+    "conversations": [
+        {
+            "from": "human",
+            "value": "<image>\n<image>\nWhat are the differences between these two cats?"
+        },
+        {
+            "from": "gpt",
+            "value": "The first cat is an orange tabby with short fur and green eyes, while the second is a gray Siamese with blue eyes and pointed coloration. They also appear to be in different environments - the first is indoors on a couch, the second is outdoors in a garden."
+        }
+    ]
+}
+```
+
+<Note>
+The number of `<image>` tags in the prompt must match the number of images in the `image` array.
+</Note>
+
+### Video Example
+
+For video understanding and temporal reasoning tasks:
+
+```json
+{
+    "video": "videos/005.mp4",
+    "conversations": [
+        {
+            "from": "human",
+            "value": "<video>\nWhat caused the blue object to move?\nOptions:\n(A) Gravity\n(B) Collision\n(C) Magnetic force"
+        },
+        {
+            "from": "gpt",
+            "value": "Answer: (B) Collision"
+        }
+    ]
+}
+```
+
+### Grounding Example
+
+For object detection and localization tasks:
+
+```json
+{
+    "image": "demo/COCO_train2014_000000580957.jpg",
+    "conversations": [
+        {
+            "from": "human",
+            "value": "<image>\nLocate house in this image and output the bbox coordinates in JSON format."
+        },
+        {
+            "from": "gpt",
+            "value": "{\n\"bbox_2d\": [135, 114, 1016, 672]\n}"
+        }
+    ]
+}
+```
+
+<Tip>
+If you have grounding data in a different format, use the `tools/process_bbox.ipynb` notebook to transform your data into the QwenVL format.
+</Tip>
+
+### Packed Data Example
+
+For improved training efficiency, multiple samples can be packed into a single sequence:
+
+```json
+[
+    {
+        "image": "images/001.jpg",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "<image>\nWhat's the main object in this picture?"
+            },
+            {
+                "from": "gpt",
+                "value": "A red apple on a wooden table"
+            }
+        ]
+    },
+    {
+        "image": "images/002.jpg",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "<image>\nWhat's the main object in this picture?"
+            },
+            {
+                "from": "gpt",
+                "value": "A green orange on a plastic table"
+            }
+        ]
+    }
+]
+```
+
+<Note>
+To use packed data, preprocess your dataset with `tools/pack_data.py` and set `data_packing=True` in your training configuration.
+</Note>
+
+## File Organization
+
+Your dataset can be organized in two ways:
+
+### Option 1: Relative Paths with data_path
+
+```python
+# In your dataset config
+{
+    "annotation_path": "/data/annotations.json",
+    "data_path": "/data/images/"  # Base path for media files
+}
+```
+
+```json
+// In your JSON file
+{
+    "image": "001.jpg",  // Will be resolved to /data/images/001.jpg
+    ...
+}
+```
+
+### Option 2: Absolute Paths
+
+```python
+# In your dataset config
+{
+    "annotation_path": "/data/annotations.json",
+    "data_path": ""  # Empty if using absolute paths
+}
+```
+
+```json
+// In your JSON file
+{
+    "image": "/absolute/path/to/images/001.jpg",
+    ...
+}
+```
+
+## Data Validation
+
+For open-source datasets that might have missing images or other issues, verify data completeness using:
+
+```bash
+python tools/check_image.py --annotation_path /path/to/annotations.json
+```
+
+## Available Public Datasets
+
+You can use these datasets directly without additional processing:
+
+- `nyu-visionx/Cambrian-10M`
+- `lmms-lab/LLaVA-NeXT-Data`
+- `FreedomIntelligence/ALLaVA-4V`
+- `TIGER-Lab/VisualWebInstruct`
+
+## Example Files
+
+The repository includes example datasets:
+- `demo/single_images.json` - Single image examples
+- `demo/video.json` - Video understanding examples
+
+These files can be used directly for training or as templates for your own datasets.

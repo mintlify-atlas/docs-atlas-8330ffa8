@@ -1,0 +1,386 @@
+---
+title: Generation Parameters
+description: Configure temperature, top_p, max_new_tokens, and other sampling parameters for optimal output quality
+---
+
+## Overview
+
+Generation parameters control the sampling behavior and output characteristics of Qwen3-VL. Proper configuration can significantly impact response quality, creativity, and coherence.
+
+## Basic Generation Parameters
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", 
+    dtype="auto", 
+    device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+            },
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+# Generate with custom parameters
+generated_ids = model.generate(
+    **inputs,
+    max_new_tokens=256,
+    temperature=0.7,
+    top_p=0.8,
+    top_k=20,
+    do_sample=True
+)
+```
+
+## Key Parameters
+
+### max_new_tokens
+
+Controls the maximum length of the generated response.
+
+```python
+# Short response
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+
+# Medium response
+generated_ids = model.generate(**inputs, max_new_tokens=512)
+
+# Long response
+generated_ids = model.generate(**inputs, max_new_tokens=2048)
+```
+
+<Note>
+- Default: 128-512 tokens for most use cases
+- Document analysis: 1024-2048 tokens
+- Long videos: Up to 4096 tokens
+</Note>
+
+### temperature
+
+Controls randomness in generation. Higher values produce more creative but less focused outputs.
+
+```python
+# Deterministic (low creativity)
+generated_ids = model.generate(**inputs, temperature=0.1, do_sample=True)
+
+# Balanced (recommended)
+generated_ids = model.generate(**inputs, temperature=0.7, do_sample=True)
+
+# Creative (high diversity)
+generated_ids = model.generate(**inputs, temperature=1.0, do_sample=True)
+```
+
+**Recommended values:**
+- `0.1-0.3`: Factual tasks, OCR, data extraction
+- `0.6-0.8`: General description, Q&A
+- `0.9-1.2`: Creative writing, brainstorming
+
+### top_p (Nucleus Sampling)
+
+Limits sampling to the smallest set of tokens whose cumulative probability exceeds `p`.
+
+```python
+# Conservative sampling
+generated_ids = model.generate(**inputs, top_p=0.5, do_sample=True)
+
+# Balanced sampling (recommended)
+generated_ids = model.generate(**inputs, top_p=0.8, do_sample=True)
+
+# Diverse sampling
+generated_ids = model.generate(**inputs, top_p=0.95, do_sample=True)
+```
+
+### top_k
+
+Limits sampling to the top K most probable tokens.
+
+```python
+# Focused generation
+generated_ids = model.generate(**inputs, top_k=10, do_sample=True)
+
+# Balanced (recommended)
+generated_ids = model.generate(**inputs, top_k=20, do_sample=True)
+
+# Diverse generation
+generated_ids = model.generate(**inputs, top_k=50, do_sample=True)
+```
+
+### do_sample
+
+Enables sampling-based generation. Set to `False` for greedy decoding.
+
+```python
+# Greedy decoding (deterministic)
+generated_ids = model.generate(**inputs, do_sample=False)
+
+# Sampling-based generation
+generated_ids = model.generate(**inputs, do_sample=True, temperature=0.7)
+```
+
+## Official Evaluation Settings
+
+### Instruct Models
+
+Recommended settings for Qwen3-VL-Instruct models:
+
+```python
+generated_ids = model.generate(
+    **inputs,
+    do_sample=True,
+    temperature=0.7,
+    top_p=0.8,
+    top_k=20,
+    repetition_penalty=1.0,
+    max_new_tokens=32768
+)
+```
+
+**Environment variables (for vLLM/serving):**
+```bash
+export greedy='false'
+export seed=3407
+export top_p=0.8
+export top_k=20
+export temperature=0.7
+export repetition_penalty=1.0
+export presence_penalty=1.5
+export out_seq_length=32768
+```
+
+### Thinking Models
+
+Recommended settings for Qwen3-VL-Thinking models:
+
+```python
+generated_ids = model.generate(
+    **inputs,
+    do_sample=True,
+    temperature=0.6,
+    top_p=0.95,
+    top_k=20,
+    repetition_penalty=1.0,
+    max_new_tokens=40960
+)
+```
+
+**Environment variables:**
+```bash
+export greedy='false'
+export seed=1234
+export top_p=0.95
+export top_k=20
+export repetition_penalty=1.0
+export presence_penalty=0.0
+export temperature=0.6
+export out_seq_length=40960
+```
+
+## Advanced Parameters
+
+### Repetition Control
+
+```python
+# Prevent repetitive text
+generated_ids = model.generate(
+    **inputs,
+    repetition_penalty=1.2,  # > 1.0 discourages repetition
+    no_repeat_ngram_size=3   # Prevents 3-gram repetition
+)
+```
+
+### Seed for Reproducibility
+
+```python
+import torch
+
+# Set seed for reproducible results
+torch.manual_seed(3407)
+
+generated_ids = model.generate(
+    **inputs,
+    do_sample=True,
+    temperature=0.7
+)
+```
+
+### Stop Sequences
+
+```python
+from transformers import StoppingCriteria, StoppingCriteriaList
+
+class CustomStoppingCriteria(StoppingCriteria):
+    def __init__(self, stop_token_ids):
+        self.stop_token_ids = stop_token_ids
+    
+    def __call__(self, input_ids, scores, **kwargs):
+        return input_ids[0][-1] in self.stop_token_ids
+
+stop_token_ids = [processor.tokenizer.eos_token_id]
+stopping_criteria = StoppingCriteriaList([CustomStoppingCriteria(stop_token_ids)])
+
+generated_ids = model.generate(
+    **inputs,
+    stopping_criteria=stopping_criteria
+)
+```
+
+## Task-Specific Configurations
+
+### Image Description
+
+```python
+generated_ids = model.generate(
+    **inputs,
+    max_new_tokens=256,
+    temperature=0.7,
+    top_p=0.8,
+    top_k=20,
+    do_sample=True
+)
+```
+
+### OCR and Text Extraction
+
+```python
+generated_ids = model.generate(
+    **inputs,
+    max_new_tokens=2048,
+    temperature=0.1,  # Low temperature for accuracy
+    do_sample=True
+)
+```
+
+### Video Understanding
+
+```python
+generated_ids = model.generate(
+    **inputs,
+    max_new_tokens=1024,
+    temperature=0.7,
+    top_p=0.8,
+    top_k=20,
+    do_sample=True
+)
+```
+
+### Creative Tasks
+
+```python
+generated_ids = model.generate(
+    **inputs,
+    max_new_tokens=512,
+    temperature=0.9,  # Higher temperature for creativity
+    top_p=0.95,
+    top_k=50,
+    do_sample=True
+)
+```
+
+## Complete Example
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+import torch
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2",
+    device_map="auto",
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+            },
+            {"type": "text", "text": "Provide a detailed description of this image."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+# Set seed for reproducibility
+torch.manual_seed(3407)
+
+# Generate with optimal parameters
+generated_ids = model.generate(
+    **inputs,
+    max_new_tokens=512,
+    temperature=0.7,
+    top_p=0.8,
+    top_k=20,
+    repetition_penalty=1.0,
+    do_sample=True
+)
+
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Performance Tips
+
+<Note>
+**Optimization Recommendations:**
+
+1. **Use flash_attention_2** for faster generation:
+   ```bash
+   pip install -U flash-attn --no-build-isolation
+   ```
+
+2. **Batch similar requests** for better throughput
+
+3. **Adjust max_new_tokens** based on expected output length to save computation
+
+4. **Use greedy decoding** (`do_sample=False`) for deterministic, factual tasks
+
+5. **Enable KV cache** (enabled by default) for faster multi-turn conversations
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Batch Inference" icon="layer-group" href="/inference/batch-inference">
+    Process multiple requests for better throughput
+  </Card>
+  <Card title="Basic Usage" icon="rocket" href="/inference/basic-usage">
+    Review basic inference patterns
+  </Card>
+</CardGroup>

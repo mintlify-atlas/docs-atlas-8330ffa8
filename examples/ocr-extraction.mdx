@@ -1,0 +1,67 @@
+---
+title: OCR & Key Information Extraction
+description: Advanced text recognition in natural scenes with multi-language support and key information extraction
+---
+
+Qwen3-VL offers robust OCR capabilities with support for 32 languages, handling challenging conditions like low light, blur, and tilt. The model excels at extracting key information from various document types and natural scenes.
+
+## Capability Overview
+
+The OCR and key information extraction features enable you to:
+- Recognize text in 32 languages (up from 10 in previous versions)
+- Handle challenging conditions: low light, blur, and tilt
+- Extract text from natural scenes
+- Recognize rare and ancient characters
+- Handle domain-specific jargon
+- Extract key information from documents
+- Perform structured data extraction
+
+## Example Usage
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", dtype="auto", device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "path/to/text_image.jpg",
+            },
+            {"type": "text", "text": "Read all the text in the image."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=1024)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Try it Yourself
+
+Explore the full OCR and key information extraction cookbook with interactive examples:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/ocr.ipynb)
+
+[View on GitHub](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/ocr.ipynb)

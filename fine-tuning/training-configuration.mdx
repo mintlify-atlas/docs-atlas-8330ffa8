@@ -1,0 +1,212 @@
+---
+title: Training Configuration
+description: Configure datasets and sampling rates for Qwen3-VL training
+---
+
+## Dataset Configuration
+
+Dataset configurations are managed in the `data/__init__.py` file. This centralized approach allows you to define multiple datasets and control their usage during training.
+
+## Dataset Definition Structure
+
+Each dataset is defined as a dictionary with two key fields:
+
+```python
+DATASET_NAME = {
+    "annotation_path": "/path/to/annotations.json",
+    "data_path": "/path/to/image/data",  # Can be empty if paths are in annotations
+}
+```
+
+### Field Descriptions
+
+- **annotation_path**: Path to a JSON or JSONL file containing your dataset annotations
+- **data_path**: Base directory for media files (can be left empty if annotation paths are absolute)
+
+## Registering Datasets
+
+After defining your dataset, register it in the `data_dict` dictionary:
+
+```python
+data_dict = {
+    "your_dataset_name": DATASET_NAME,
+    # ... other datasets
+}
+```
+
+## Complete Configuration Example
+
+Here's a complete example showing how to add a custom dataset:
+
+```python data/__init__.py
+# Define your dataset
+MY_DATASET = {
+    "annotation_path": "/data/my_dataset/annotations.json",
+    "data_path": "/data/my_dataset/images/",
+}
+
+# Example: Using an existing public dataset
+CAMBRIAN_737K = {
+    "annotation_path": "/data/cambrian/cambrian_737k.json",
+    "data_path": "/data/cambrian/images/",
+}
+
+# Register datasets in the data dictionary
+data_dict = {
+    "my_dataset": MY_DATASET,
+    "cambrian_737k": CAMBRIAN_737K,
+}
+```
+
+## Sampling Rate Control
+
+Control the proportion of data used from each dataset by appending `%X` to the dataset name, where X is the percentage:
+
+```python
+# Use 50% of the dataset
+dataset_names = ["my_dataset%50"]
+
+# Use 20% of the dataset
+dataset_names = ["my_dataset%20"]
+
+# Use 100% of the dataset (default)
+dataset_names = ["my_dataset%100"]
+# Or simply:
+dataset_names = ["my_dataset"]
+```
+
+### Multiple Datasets with Different Sampling Rates
+
+You can combine multiple datasets with different sampling rates:
+
+```python
+dataset_names = [
+    "my_dataset%100",      # Use all of my_dataset
+    "cambrian_737k%30",    # Use 30% of cambrian_737k
+    "llava_next%50"        # Use 50% of llava_next
+]
+
+configs = data_list(dataset_names)
+```
+
+<Note>
+Sampling rates are applied independently to each dataset. This allows you to balance dataset sizes and prevent larger datasets from dominating the training.
+</Note>
+
+## Usage in Training Scripts
+
+Reference your datasets in the training script using the `--dataset_use` parameter:
+
+```bash
+python qwenvl/train/train_qwen.py \
+    --dataset_use "my_dataset%50" \
+    --model_name_or_path /path/to/model \
+    ...
+```
+
+For multiple datasets:
+
+```bash
+python qwenvl/train/train_qwen.py \
+    --dataset_use "my_dataset%100,cambrian_737k%30,llava_next%50" \
+    --model_name_or_path /path/to/model \
+    ...
+```
+
+## Path Resolution
+
+### Relative Paths
+
+When `data_path` is specified, media paths in annotations are treated as relative:
+
+```python
+MY_DATASET = {
+    "annotation_path": "/data/annotations.json",
+    "data_path": "/data/images/",
+}
+```
+
+```json annotations.json
+{
+    "image": "subfolder/001.jpg"  // Resolved to: /data/images/subfolder/001.jpg
+}
+```
+
+### Absolute Paths
+
+When `data_path` is empty, use absolute paths in your annotations:
+
+```python
+MY_DATASET = {
+    "annotation_path": "/data/annotations.json",
+    "data_path": "",
+}
+```
+
+```json annotations.json
+{
+    "image": "/absolute/path/to/images/001.jpg"
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Organizing Multiple Datasets">
+    Keep related datasets grouped together in your configuration:
+    
+    ```python
+    # Group by task type
+    VQA_DATASET = {...}
+    CAPTION_DATASET = {...}
+    GROUNDING_DATASET = {...}
+    
+    data_dict = {
+        "vqa": VQA_DATASET,
+        "caption": CAPTION_DATASET,
+        "grounding": GROUNDING_DATASET,
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Balancing Dataset Sizes">
+    Use sampling rates to balance large and small datasets:
+    
+    ```python
+    # Large dataset (1M samples) - use 10%
+    # Small dataset (10K samples) - use 100%
+    dataset_names = [
+        "large_dataset%10",   # 100K samples
+        "small_dataset%100"   # 10K samples
+    ]
+    ```
+  </Accordion>
+  
+  <Accordion title="Incremental Testing">
+    Start with small sampling rates for initial testing:
+    
+    ```python
+    # Testing phase
+    dataset_names = ["my_dataset%1"]  # Use 1% for quick iteration
+    
+    # Production training
+    dataset_names = ["my_dataset%100"]  # Use full dataset
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Warning>
+**Common Issues:**
+
+1. **Dataset not found**: Ensure your dataset name matches exactly what's defined in `data_dict`
+2. **Missing images**: Verify `data_path` is correct and media files exist
+3. **Path resolution errors**: Check if you need relative or absolute paths based on your `data_path` setting
+</Warning>
+
+Use the data validation tool to check for issues:
+
+```bash
+python tools/check_image.py --annotation_path /path/to/annotations.json
+```

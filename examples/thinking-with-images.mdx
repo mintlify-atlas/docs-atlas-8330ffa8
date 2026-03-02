@@ -1,0 +1,66 @@
+---
+title: Thinking with Images
+description: Use image zoom and search tools for precise comprehension of fine-grained visual details
+---
+
+Qwen3-VL can utilize specialized tools like image_zoom_in and search_tool to facilitate precise comprehension of fine-grained visual details within images. This enables deeper visual reasoning and analysis.
+
+## Capability Overview
+
+The thinking with images feature enables you to:
+- Zoom into specific image regions for detail analysis
+- Use search tools to find specific visual elements
+- Perform fine-grained visual reasoning
+- Analyze complex visual details
+- Combine multiple visual analysis tools
+- Enable step-by-step visual problem solving
+
+## Example Usage
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Thinking", dtype="auto", device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Thinking")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "path/to/complex_image.jpg",
+            },
+            {"type": "text", "text": "Analyze the fine details in this image and explain what you observe."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=1024)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Try it Yourself
+
+Explore the full thinking with images cookbook with interactive examples:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/think_with_images.ipynb)
+
+[View on GitHub](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/think_with_images.ipynb)

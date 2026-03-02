@@ -1,0 +1,57 @@
+---
+title: Using OpenAI Client with DashScope API
+description: Learn how to use the OpenAI client to interact with Qwen3-VL models through DashScope API
+---
+
+You can use Qwen3-VL models through the DashScope API using the OpenAI client library. This provides a familiar interface for interacting with the models.
+
+## Basic Setup
+
+First, install the OpenAI Python client:
+
+```bash
+pip install openai
+```
+
+## Image Understanding Example
+
+Here's how to use the DashScope API with an OpenAI-compatible client:
+
+```python
+from openai import OpenAI
+
+# Set your DASHSCOPE_API_KEY here
+DASHSCOPE_API_KEY = "your-api-key-here"
+
+client = OpenAI(
+    api_key=DASHSCOPE_API_KEY,
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+
+completion = client.chat.completions.create(
+    model="qwen3-vl-235b-a22b-instruct",
+    messages=[{"role": "user", "content": [
+        {"type": "image_url",
+         "image_url": {"url": "https://dashscope.oss-cn-beijing.aliyuncs.com/images/dog_and_girl.jpeg"}},
+        {"type": "text", "text": "这是什么"},
+    ]}]
+)
+print(completion.model_dump_json())
+```
+
+## Key Features
+
+- **OpenAI-Compatible API**: Use familiar OpenAI client patterns
+- **Multi-Modal Support**: Send images via URLs with `image_url` type
+- **Model Selection**: Choose from available Qwen3-VL model sizes
+- **Flexible Content**: Combine text and images in a single request
+
+## API Configuration
+
+- **Base URL**: `https://dashscope.aliyuncs.com/compatible-mode/v1`
+- **Authentication**: Use your DashScope API key
+- **Available Models**: `qwen3-vl-235b-a22b-instruct` and other Qwen3-VL variants
+
+## Additional Resources
+
+For more detailed usage and advanced features, refer to the [Aliyun DashScope documentation](https://help.aliyun.com/zh/model-studio/developer-reference/qwen-vl-api).

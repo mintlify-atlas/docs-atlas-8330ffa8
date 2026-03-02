@@ -1,0 +1,173 @@
+---
+title: 'fetch_image'
+description: 'Load and process images from various sources'
+---
+
+## Function Signature
+
+```python
+def fetch_image(
+    ele: Dict[str, Union[str, Image.Image]], 
+    image_patch_size: int = 14
+) -> Image.Image
+```
+
+## Description
+
+Loads an image from various sources (local file, URL, base64 string, or PIL.Image object) and applies smart resizing based on the model's requirements. The function automatically handles different image formats and converts them to RGB.
+
+## Parameters
+
+<ParamField path="ele" type="Dict[str, Union[str, Image.Image]]" required>
+  Dictionary containing image information and optional resize parameters.
+  
+  Required keys:
+  - `image` or `image_url`: The image source (file path, URL, base64 string, or PIL.Image)
+  
+  Optional keys:
+  - `resized_height`: Target height for resizing
+  - `resized_width`: Target width for resizing
+  - `min_pixels`: Minimum number of pixels (default: 4 * patch_factor²)
+  - `max_pixels`: Maximum number of pixels (default: 16384 * patch_factor²)
+</ParamField>
+
+<ParamField path="image_patch_size" type="int" default="14">
+  The patch size used by the vision encoder. Affects the resizing factor calculation.
+  
+  Common values:
+  - `14` for Qwen2VL and Qwen2.5VL
+  - `16` for Qwen3VL
+  
+  The actual resize factor is `image_patch_size * 2` (spatial merge size).
+</ParamField>
+
+## Returns
+
+<ResponseField name="image" type="PIL.Image.Image">
+  Processed RGB PIL Image resized to dimensions divisible by the patch factor.
+  
+  The image dimensions are calculated using [smart_resize](/api/utils/smart-resize) to maintain aspect ratio while staying within min/max pixel constraints.
+</ResponseField>
+
+## Supported Image Sources
+
+### Local File Path
+
+```python
+from qwen_vl_utils import fetch_image
+
+# Absolute path
+image = fetch_image({"image": "/path/to/image.jpg"})
+
+# File URI
+image = fetch_image({"image": "file:///path/to/image.jpg"})
+```
+
+### HTTP/HTTPS URL
+
+```python
+image = fetch_image({
+    "image": "https://example.com/photo.jpg"
+})
+```
+
+### Base64 Encoded
+
+```python
+image = fetch_image({
+    "image": "data:image;base64,/9j/4AAQSkZJRgABAQEA..."
+})
+```
+
+### PIL.Image Object
+
+```python
+from PIL import Image
+
+pil_image = Image.open("photo.jpg")
+processed_image = fetch_image({"image": pil_image})
+```
+
+## Custom Resize Parameters
+
+### Specify Exact Dimensions
+
+```python
+image = fetch_image({
+    "image": "file:///path/to/image.jpg",
+    "resized_height": 280,
+    "resized_width": 420
+})
+```
+
+Note: The actual dimensions will be adjusted to be divisible by the patch factor.
+
+### Control Pixel Range
+
+```python
+image = fetch_image({
+    "image": "file:///path/to/image.jpg",
+    "min_pixels": 56 * 56 * 4,      # Minimum 56x56 patches
+    "max_pixels": 56 * 56 * 16384   # Maximum 16384 patches
+})
+```
+
+## Image Processing Steps
+
+1. **Load Image**: Detects source type (file, URL, base64, PIL) and loads the image
+2. **Convert to RGB**: Handles RGBA images by compositing on white background
+3. **Calculate Resize Dimensions**: Uses [smart_resize](/api/utils/smart-resize) to determine optimal dimensions
+4. **Resize**: Applies resize maintaining aspect ratio within constraints
+
+## Error Handling
+
+```python
+try:
+    image = fetch_image({"image": "invalid_source"})
+except ValueError as e:
+    print(f"Error: {e}")
+    # Output: Unrecognized image input, support local path, http url, base64 and PIL.Image
+```
+
+## Usage with process_vision_info
+
+While you can use `fetch_image` directly, it's typically called internally by [process_vision_info](/api/utils/process-vision-info):
+
+```python
+from qwen_vl_utils import process_vision_info
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image.jpg"},
+            {"type": "text", "text": "Describe this image."}
+        ]
+    }
+]
+
+images, videos = process_vision_info(messages)
+# fetch_image is called automatically for each image
+```
+
+## RGBA Image Handling
+
+Images with alpha channels (RGBA) are automatically composited onto a white background:
+
+```python
+from PIL import Image
+
+# Load PNG with transparency
+rgba_image = Image.open("logo.png")  # RGBA mode
+
+# Automatically converted to RGB with white background
+rgb_image = fetch_image({"image": rgba_image})
+
+assert rgb_image.mode == "RGB"
+```
+
+## See Also
+
+- [process_vision_info](/api/utils/process-vision-info) - Process all vision content from conversations
+- [smart_resize](/api/utils/smart-resize) - Understanding the resize algorithm
+- [fetch_video](/api/utils/fetch-video) - Load video files

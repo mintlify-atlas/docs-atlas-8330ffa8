@@ -1,0 +1,83 @@
+---
+title: 'qwen-vl-utils Overview'
+description: 'Python utilities for processing vision and language information with Qwen-VL models'
+---
+
+## Overview
+
+The `qwen-vl-utils` package provides helper functions for processing and integrating visual language information with Qwen-VL Series Models. It handles image and video loading, resizing, and formatting for use with Qwen2VL, Qwen2.5VL, and Qwen3VL models.
+
+## Installation
+
+```bash
+pip install qwen-vl-utils
+```
+
+## When to Use
+
+Use `qwen-vl-utils` when you need to:
+
+- Process images from various sources (local files, URLs, base64, PIL.Image objects)
+- Extract frames from videos for vision-language tasks
+- Automatically resize images and videos to optimal dimensions
+- Prepare vision inputs for Qwen-VL model processors
+
+## Key Functions
+
+<CardGroup cols={2}>
+  <Card title="process_vision_info" icon="wand-magic-sparkles" href="/api/utils/process-vision-info">
+    Main function to extract and process all vision information from conversations
+  </Card>
+  <Card title="fetch_image" icon="image" href="/api/utils/fetch-image">
+    Load and resize images from files, URLs, or base64 strings
+  </Card>
+  <Card title="fetch_video" icon="video" href="/api/utils/fetch-video">
+    Extract and process video frames with configurable parameters
+  </Card>
+  <Card title="smart_resize" icon="expand" href="/api/utils/smart-resize">
+    Intelligently resize images while maintaining aspect ratio
+  </Card>
+</CardGroup>
+
+## Quick Example
+
+```python
+from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
+from qwen_vl_utils import process_vision_info
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image.jpg"},
+            {"type": "text", "text": "Describe this image."}
+        ]
+    }
+]
+
+processor = AutoProcessor.from_pretrained(model_path)
+model = Qwen2VLForConditionalGeneration.from_pretrained(
+    model_path, torch_dtype="auto", device_map="auto"
+)
+
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+images, videos = process_vision_info(messages)
+inputs = processor(text=text, images=images, videos=videos, padding=True, return_tensors="pt")
+
+generated_ids = model.generate(**inputs)
+```
+
+## Supported Input Formats
+
+### Images
+
+- Local file paths: `file:///path/to/image.jpg`
+- HTTP/HTTPS URLs: `http://example.com/image.jpg`
+- Base64 encoded: `data:image;base64,/9j/...`
+- PIL.Image objects: Direct PIL.Image.Image instances
+
+### Videos
+
+- Local video files: `file:///path/to/video.mp4`
+- HTTP/HTTPS URLs: `http://example.com/video.mp4`
+- Frame sequences: List of image paths representing video frames

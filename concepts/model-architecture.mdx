@@ -1,0 +1,110 @@
+---
+title: Model Architecture
+description: Technical details of Qwen3-VL's architecture including Interleaved-MRoPE, DeepStack, and Text-Timestamp Alignment
+---
+
+Qwen3-VL introduces three major architectural innovations that enhance its vision-language capabilities:
+
+<img src="https://qianwen-res.oss-accelerate.aliyuncs.com/Qwen3-VL/qwen3vl_arc.jpg" alt="Qwen3-VL Architecture" />
+
+## Interleaved-MRoPE
+
+**Multimodal Rotary Position Embedding with Interleaved Design**
+
+Interleaved-MRoPE provides full-frequency allocation over time, width, and height dimensions through robust positional embeddings. This architecture:
+
+- Enhances long-horizon video reasoning capabilities
+- Allocates position frequencies across temporal and spatial dimensions
+- Supports extended context understanding for video sequences
+- Enables the model to maintain positional awareness across frames
+
+### Key Benefits
+
+- **Temporal Understanding**: Precise tracking of events across video timelines
+- **Spatial Awareness**: Maintains object position relationships within frames
+- **Long Context Support**: Extends to 256K tokens natively, expandable to 1M with YaRN
+
+<Note>
+Because Interleaved-MRoPE's position IDs grow more slowly than vanilla RoPE, use a **smaller scaling factor** when extending context. For example, to support 1M context from 256K base, set factor=2 or 3, not 4.
+</Note>
+
+## DeepStack
+
+**Multi-Level Visual Feature Fusion**
+
+DeepStack fuses multi-level Vision Transformer (ViT) features to capture fine-grained visual details and strengthen image-text alignment.
+
+### Architecture Details
+
+- Combines features from multiple ViT layers
+- Captures both high-level semantics and low-level details
+- Improves grounding accuracy for spatial tasks
+- Enhances visual-text correspondence
+
+### Applications
+
+- **Fine-grained Recognition**: Better detail detection in images
+- **Spatial Grounding**: More accurate 2D and 3D object localization
+- **Document Understanding**: Improved layout and structure parsing
+- **OCR Enhancement**: Better text detection in challenging conditions
+
+## Text-Timestamp Alignment
+
+**Precise Video Temporal Modeling**
+
+Qwen3-VL moves beyond T-RoPE to implement precise, timestamp-grounded event localization for stronger video temporal modeling.
+
+### Features
+
+- Direct timestamp association with textual descriptions
+- Frame-accurate event localization
+- Second-level video indexing
+- Enhanced temporal reasoning
+
+### Use Cases
+
+- **Video Grounding**: Locate specific moments in long videos
+- **Event Detection**: Identify when specific actions occur
+- **Video QA**: Answer time-based questions about video content
+- **Long Video Understanding**: Process hours-long videos with temporal precision
+
+## Architecture Comparison
+
+Compared to previous Qwen vision-language models:
+
+| Feature | Qwen2-VL | Qwen3-VL |
+|---------|----------|----------|
+| Position Encoding | M-RoPE | Interleaved-MRoPE |
+| Feature Fusion | Single-level | DeepStack (multi-level) |
+| Temporal Modeling | T-RoPE | Text-Timestamp Alignment |
+| Native Context | 128K | 256K |
+| Max Context (YaRN) | 512K | 1M |
+
+## Implementation Considerations
+
+### Context Extension with YaRN
+
+For texts exceeding 256K tokens, Qwen3-VL uses [YaRN](https://arxiv.org/abs/2309.00071) for length extrapolation:
+
+```json
+{
+    "max_position_embeddings": 1000000,
+    "rope_scaling": {
+        "rope_type": "yarn",
+        "mrope_section": [24, 20, 20],
+        "mrope_interleaved": true,
+        "factor": 3.0,
+        "original_max_position_embeddings": 262144
+    }
+}
+```
+
+### Performance Optimization
+
+- **Flash Attention 2**: Recommended for multi-image and video scenarios
+- **Tensor Parallelism**: Supports distributed inference across multiple GPUs
+- **FP8 Quantization**: Available for H100+ GPUs with CUDA 12+
+
+<Tip>
+For optimal performance with video inputs, enable Flash Attention 2 and use the `attn_implementation="flash_attention_2"` parameter when loading the model.
+</Tip>

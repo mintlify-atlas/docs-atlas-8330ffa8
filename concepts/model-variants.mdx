@@ -1,0 +1,175 @@
+---
+title: Model Variants
+description: Overview of Qwen3-VL model sizes, architectures, and editions
+---
+
+Qwen3-VL is available in multiple sizes and configurations to meet different deployment scenarios, from edge devices to cloud infrastructure.
+
+## Model Sizes
+
+Qwen3-VL comes in five different parameter scales:
+
+### Dense Architecture Models
+
+| Model Size | Parameters | Use Case | Hardware Requirement |
+|------------|------------|----------|----------------------|
+| **2B** | 2 Billion | Edge devices, mobile | Consumer GPUs |
+| **4B** | 4 Billion | Lightweight deployment | Single GPU |
+| **8B** | 8 Billion | Balanced performance | Single GPU (16GB+) |
+| **32B** | 32 Billion | High-performance tasks | Multi-GPU |
+
+### Mixture-of-Experts (MoE) Architecture
+
+| Model Size | Total Parameters | Active Parameters | Use Case |
+|------------|------------------|-------------------|----------|
+| **30B-A3B** | 30 Billion | 3 Billion | Efficient large-scale |
+| **235B-A22B** | 235 Billion | 22 Billion | State-of-the-art performance |
+
+<Note>
+MoE models activate only a subset of parameters per inference, providing better efficiency and performance tradeoffs compared to dense models of similar total parameter count.
+</Note>
+
+## Model Editions
+
+Each model size is available in two editions:
+
+### Instruct Edition
+
+**Optimized for direct task execution**
+
+- Fast inference and response generation
+- Suitable for production deployments
+- Optimized for instruction-following
+- Lower computational overhead
+
+**Example**: `Qwen3-VL-8B-Instruct`
+
+### Thinking Edition
+
+**Enhanced reasoning with explicit thought processes**
+
+- Provides step-by-step reasoning
+- Better performance on complex tasks
+- Useful for debugging and interpretability
+- Longer output sequences
+
+**Example**: `Qwen3-VL-8B-Thinking`
+
+<Tip>
+Thinking editions are particularly effective for:
+- STEM and mathematical reasoning
+- Complex spatial understanding
+- Multi-step problem solving
+- Tasks requiring causal analysis
+</Tip>
+
+## Architecture Comparison
+
+### Dense vs MoE
+
+**Dense Models**
+- All parameters active during inference
+- Predictable memory usage
+- Simpler deployment
+- Best for: Resource-constrained environments
+
+**MoE Models**
+- Sparse activation patterns
+- Higher capacity with lower compute
+- Requires expert parallelism support
+- Best for: Maximum performance scenarios
+
+## Available Models
+
+### Released Models (HuggingFace)
+
+<CardGroup cols={2}>
+  <Card title="2B Models" icon="microchip">
+    - [Qwen3-VL-2B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct)
+    - [Qwen3-VL-2B-Thinking](https://huggingface.co/Qwen/Qwen3-VL-2B-Thinking)
+  </Card>
+  
+  <Card title="4B Models" icon="microchip">
+    - [Qwen3-VL-4B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct)
+    - [Qwen3-VL-4B-Thinking](https://huggingface.co/Qwen/Qwen3-VL-4B-Thinking)
+  </Card>
+  
+  <Card title="8B Models" icon="microchip">
+    - [Qwen3-VL-8B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct)
+    - [Qwen3-VL-8B-Thinking](https://huggingface.co/Qwen/Qwen3-VL-8B-Thinking)
+  </Card>
+  
+  <Card title="32B Models" icon="microchip">
+    - [Qwen3-VL-32B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-32B-Instruct)
+    - [Qwen3-VL-32B-Thinking](https://huggingface.co/Qwen/Qwen3-VL-32B-Thinking)
+  </Card>
+  
+  <Card title="30B-A3B MoE" icon="brain">
+    - [Qwen3-VL-30B-A3B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct)
+    - [Qwen3-VL-30B-A3B-Thinking](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Thinking)
+  </Card>
+  
+  <Card title="235B-A22B MoE" icon="brain">
+    - [Qwen3-VL-235B-A22B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Instruct)
+    - [Qwen3-VL-235B-A22B-Thinking](https://huggingface.co/Qwen/Qwen3-VL-235B-A22B-Thinking)
+  </Card>
+</CardGroup>
+
+## Model Selection Guide
+
+### By Use Case
+
+**Edge/Mobile Applications**
+- Choose: **2B or 4B Instruct**
+- Rationale: Low memory footprint, fast inference
+
+**General Purpose Vision-Language Tasks**
+- Choose: **8B Instruct**
+- Rationale: Best balance of performance and efficiency
+
+**Complex Reasoning Tasks**
+- Choose: **8B or 32B Thinking**
+- Rationale: Enhanced reasoning capabilities
+
+**Maximum Performance**
+- Choose: **235B-A22B Instruct/Thinking**
+- Rationale: State-of-the-art results across benchmarks
+
+**Production with Budget Constraints**
+- Choose: **30B-A3B Instruct**
+- Rationale: MoE efficiency with strong performance
+
+### By Hardware
+
+```python
+# Single Consumer GPU (8-16GB)
+model = "Qwen3-VL-2B-Instruct"
+
+# Single High-End GPU (24GB+)
+model = "Qwen3-VL-8B-Instruct"
+
+# Multi-GPU (A100/H100)
+model = "Qwen3-VL-32B-Instruct"
+
+# H100+ with FP8 Support
+model = "Qwen3-VL-235B-A22B-Instruct-FP8"
+```
+
+## Quantized Versions
+
+For memory-constrained deployments, FP8 quantized versions are available:
+
+- Requires NVIDIA H100+ and CUDA 12+
+- Minimal performance degradation
+- Significant memory savings
+- Faster inference throughput
+
+**Available**: All models have FP8 variants in the [HuggingFace collection](https://huggingface.co/collections/Qwen/qwen3-vl-68d2a7c1b8a8afce4ebd2dbe)
+
+## Performance Benchmarks
+
+For detailed performance comparisons across different model sizes and editions, see the [Benchmarks](/resources/benchmarks) page.
+
+<Warning>
+MoE models require specialized deployment configuration. Ensure your inference framework supports expert parallelism (e.g., vLLM with `--enable-expert-parallel` flag).
+</Warning>

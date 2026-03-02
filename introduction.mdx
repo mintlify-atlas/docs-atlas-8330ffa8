@@ -1,0 +1,176 @@
+---
+title: Introduction
+description: Meet Qwen3-VL, the most powerful vision-language model in the Qwen series with superior text understanding, visual perception, and agent capabilities.
+---
+
+<img
+  className="block dark:hidden"
+  src="https://qianwen-res.oss-accelerate.aliyuncs.com/Qwen3-VL/qwen3vllogo.png"
+  alt="Qwen3-VL Logo"
+/>
+<img
+  className="hidden dark:block"
+  src="https://qianwen-res.oss-accelerate.aliyuncs.com/Qwen3-VL/qwen3vllogo.png"
+  alt="Qwen3-VL Logo"
+/>
+
+## Overview
+
+Meet Qwen3-VL — the most powerful vision-language model in the Qwen series to date.
+
+This generation delivers comprehensive upgrades across the board: superior text understanding & generation, deeper visual perception & reasoning, extended context length, enhanced spatial and video dynamics comprehension, and stronger agent interaction capabilities.
+
+Available in Dense and MoE architectures that scale from edge to cloud, with Instruct and reasoning‑enhanced Thinking editions for flexible, on‑demand deployment.
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get started with Qwen3-VL in minutes with a simple inference example
+  </Card>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Install transformers, qwen-vl-utils, and dependencies
+  </Card>
+  <Card
+    title="Model Variants"
+    icon="grid"
+    href="#model-variants"
+  >
+    Explore different model sizes from 2B to 235B parameters
+  </Card>
+  <Card
+    title="GitHub Repository"
+    icon="github"
+    href="https://github.com/QwenLM/Qwen3-VL"
+  >
+    View source code, examples, and contribute
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<AccordionGroup>
+  <Accordion title="Visual Agent" icon="robot">
+    Operates PC/mobile GUIs—recognizes elements, understands functions, invokes tools, completes tasks.
+  </Accordion>
+
+  <Accordion title="Visual Coding Boost" icon="code">
+    Generates Draw.io/HTML/CSS/JS from images/videos.
+  </Accordion>
+
+  <Accordion title="Advanced Spatial Perception" icon="cube">
+    Judges object positions, viewpoints, and occlusions; provides stronger 2D grounding and enables 3D grounding for spatial reasoning and embodied AI.
+  </Accordion>
+
+  <Accordion title="Long Context & Video Understanding" icon="video">
+    Native 256K context, expandable to 1M; handles books and hours-long video with full recall and second-level indexing.
+  </Accordion>
+
+  <Accordion title="Enhanced Multimodal Reasoning" icon="brain">
+    Excels in STEM/Math—causal analysis and logical, evidence-based answers.
+  </Accordion>
+
+  <Accordion title="Upgraded Visual Recognition" icon="eye">
+    Broader, higher-quality pretraining is able to "recognize everything"—celebrities, anime, products, landmarks, flora/fauna, etc.
+  </Accordion>
+
+  <Accordion title="Expanded OCR" icon="language">
+    Supports 32 languages (up from 10); robust in low light, blur, and tilt; better with rare/ancient characters and jargon; improved long-document structure parsing.
+  </Accordion>
+
+  <Accordion title="Text Understanding on par with pure LLMs" icon="book-open">
+    Seamless text–vision fusion for lossless, unified comprehension.
+  </Accordion>
+</AccordionGroup>
+
+## Model Variants
+
+Qwen3-VL offers a range of model sizes to suit different deployment scenarios:
+
+<CardGroup cols={3}>
+  <Card title="2B Instruct/Thinking" icon="microchip">
+    Lightweight edge deployment
+  </Card>
+  <Card title="4B Instruct/Thinking" icon="microchip">
+    Balanced performance
+  </Card>
+  <Card title="8B Instruct/Thinking" icon="microchip">
+    Strong capabilities
+  </Card>
+  <Card title="32B Instruct/Thinking" icon="server">
+    High performance
+  </Card>
+  <Card title="30B-A3B Instruct/Thinking" icon="server">
+    MoE architecture
+  </Card>
+  <Card title="235B-A22B Instruct/Thinking" icon="server">
+    Flagship model with MoE
+  </Card>
+</CardGroup>
+
+<Note>
+  All models are available on [Hugging Face](https://huggingface.co/collections/Qwen/qwen3-vl-68d2a7c1b8a8afce4ebd2dbe) and [ModelScope](https://modelscope.cn/collections/Qwen3-VL-5c7a94c8cb144b).
+</Note>
+
+## Architecture Innovations
+
+<img
+  src="https://qianwen-res.oss-accelerate.aliyuncs.com/Qwen3-VL/qwen3vl_arc.jpg"
+  alt="Qwen3-VL Architecture"
+/>
+
+### Core Improvements
+
+<Steps>
+  <Step title="Interleaved-MRoPE">
+    Full‑frequency allocation over time, width, and height via robust positional embeddings, enhancing long‑horizon video reasoning.
+  </Step>
+  <Step title="DeepStack">
+    Fuses multi‑level ViT features to capture fine‑grained details and sharpen image–text alignment.
+  </Step>
+  <Step title="Text–Timestamp Alignment">
+    Moves beyond T‑RoPE to precise, timestamp‑grounded event localization for stronger video temporal modeling.
+  </Step>
+</Steps>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Research Paper" icon="file-lines" href="https://arxiv.org/pdf/2511.21631">
+    Read the full technical report
+  </Card>
+  <Card title="Blog Post" icon="newspaper" href="https://qwen.ai/blog?id=99f0335c4ad9ff6153e517418d48535ab6d8afef">
+    Latest announcements and insights
+  </Card>
+  <Card title="Cookbooks" icon="book" href="https://github.com/QwenLM/Qwen3-VL/tree/main/cookbooks">
+    Explore practical examples and tutorials
+  </Card>
+  <Card title="Demo" icon="play" href="https://huggingface.co/spaces/Qwen/Qwen3-VL-Demo">
+    Try the interactive demo
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Run Your First Inference"
+    icon="play"
+    href="/quickstart"
+  >
+    Follow our quickstart guide to run Qwen3-VL with your first image
+  </Card>
+  <Card
+    title="Deploy to Production"
+    icon="server"
+    href="/deployment/overview"
+  >
+    Learn how to deploy Qwen3-VL with vLLM or SGLang
+  </Card>
+</CardGroup>

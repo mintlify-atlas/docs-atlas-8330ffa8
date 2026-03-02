@@ -1,0 +1,184 @@
+---
+title: SGLang Deployment
+description: Deploy Qwen3-VL with SGLang for efficient inference and serving
+---
+
+## Overview
+
+SGLang provides an alternative high-performance serving solution for Qwen3-VL models. You can start an SGLang server to serve models efficiently with an OpenAI-style API.
+
+## Starting the SGLang Server
+
+Launch the SGLang server with the following command:
+
+```bash
+python -m sglang.launch_server \
+   --model-path Qwen/Qwen3-VL-235B-A22B-Instruct \
+   --host 0.0.0.0 \
+   --port 22002 \
+   --tp 4
+```
+
+### Server Parameters
+
+- `--model-path`: Path to the model (local path or HuggingFace model ID)
+- `--host`: Server host address (default: 0.0.0.0)
+- `--port`: Server port (default: 22002)
+- `--tp`: Tensor parallelism size for multi-GPU deployment
+
+## Making Requests
+
+Once the server is running, you can make requests using the OpenAI-compatible API.
+
+### Image Request Example
+
+```python
+import time
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="EMPTY",
+    base_url="http://127.0.0.1:22002/v1",
+    timeout=3600
+)
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": "https://ofasys-multimodal-wlcb-3-toshanghai.oss-accelerate.aliyuncs.com/wpf272043/keepme/image/receipt.png"
+                }
+            },
+            {
+                "type": "text",
+                "text": "Read all the text in the image."
+            }
+        ]
+    }
+]
+
+start = time.time()
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-VL-235B-A22B-Instruct",
+    messages=messages,
+    max_tokens=2048
+)
+print(f"Response costs: {time.time() - start:.2f}s")
+print(f"Generated text: {response.choices[0].message.content}")
+```
+
+### Video Request Example
+
+```python
+import time
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="EMPTY",
+    base_url="http://127.0.0.1:22002/v1",
+    timeout=3600
+)
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video_url",
+                "video_url": {
+                    "url": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-VL/space_woaudio.mp4"
+                }
+            },
+            {
+                "type": "text",
+                "text": "How long is this video?"
+            }
+        ]
+    }
+]
+
+start = time.time()
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-VL-235B-A22B-Instruct",
+    messages=messages,
+    max_tokens=2048
+)
+print(f"Response costs: {time.time() - start:.2f}s")
+print(f"Generated text: {response.choices[0].message.content}")
+```
+
+## Offline Inference
+
+You can also use SGLang for local offline inference without running a server:
+
+```python
+import time
+from PIL import Image
+from sglang import Engine
+from qwen_vl_utils import process_vision_info
+from transformers import AutoProcessor, AutoConfig
+
+
+if __name__ == "__main__":
+    # TODO: change to your own checkpoint path
+    checkpoint_path = "Qwen/Qwen3-VL-235B-A22B-Instruct"
+    processor = AutoProcessor.from_pretrained(checkpoint_path)
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+              {
+                  "type": "image",
+                  "image": "https://ofasys-multimodal-wlcb-3-toshanghai.oss-accelerate.aliyuncs.com/wpf272043/keepme/image/receipt.png",
+              },
+              {"type": "text", "text": "Read all the text in the image."},
+            ],
+        }
+    ]
+
+    text = processor.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
+    image_inputs, _ = process_vision_info(messages, image_patch_size=processor.image_processor.patch_size)
+
+    llm = Engine(
+        model_path=checkpoint_path,
+        enable_multimodal=True,
+        mem_fraction_static=0.8,
+        tp_size=4,
+        attention_backend="fa3",
+        context_length=10240,
+        disable_cuda_graph=True,
+    )
+
+    start = time.time()
+    sampling_params = {"max_new_tokens": 1024}
+    response = llm.generate(prompt=text, image_data=image_inputs, sampling_params=sampling_params)
+    print(f"Response costs: {time.time() - start:.2f}s")
+    print(f"Generated text: {response['text']}")
+```
+
+## Engine Configuration
+
+The SGLang Engine supports various configuration options:
+
+- `model_path`: Path to the model checkpoint
+- `enable_multimodal`: Enable multimodal support (required for Qwen3-VL)
+- `mem_fraction_static`: GPU memory fraction for static allocation (0.0-1.0)
+- `tp_size`: Tensor parallelism size for multi-GPU deployment
+- `attention_backend`: Attention implementation (e.g., "fa3" for FlashAttention 3)
+- `context_length`: Maximum context length
+- `disable_cuda_graph`: Disable CUDA graph optimization (may be needed for stability)
+
+## Next Steps
+
+- Compare with [vLLM deployment](/deployment/vllm)
+- Try the [Docker deployment](/deployment/docker) for quick setup
+- Learn about the [DashScope API service](/deployment/api-service)

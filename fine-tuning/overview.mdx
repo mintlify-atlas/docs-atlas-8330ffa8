@@ -1,0 +1,84 @@
+---
+title: Training Overview
+description: Learn how to fine-tune Qwen3-VL models with the official training framework
+---
+
+## Introduction
+
+The Qwen3-VL training framework provides a comprehensive solution for fine-tuning vision-language models. Built on top of the Hugging Face Trainer, it supports various training scenarios including single-image, multi-image, video understanding, and grounding tasks.
+
+## Repository Structure
+
+The training framework is organized into three main components:
+
+### `train/`
+Core training modules:
+- `trainer.py`: Main trainer updated from Hugging Face Trainer
+- `train_qwen.py`: Main file for training execution
+- `argument.py`: Dataclasses for model, data and training arguments
+
+### `data/`
+Data processing utilities:
+- `__init__.py`: Contains dataset configs
+- `data_processor.py`: Data processing module for QwenVL models
+- `rope2d.py`: Provides RoPE implementation
+
+### `tools/`
+Utility scripts:
+- `process_bbox.ipynb`: Convert bounding boxes into QwenVL format for grounding data
+- `pack_data.py`: Pack data into even length buckets for efficient training
+
+## Requirements
+
+The following package versions are recommended:
+
+```txt
+torch==2.6.0
+torchvision==0.21.0
+transformers==4.57.0.dev0
+deepspeed==0.17.1
+flash_attn==2.7.4.post1
+triton==3.2.0
+accelerate==1.7.0
+torchcodec==0.2
+peft==0.17.1
+```
+
+## When to Fine-tune
+
+Consider fine-tuning Qwen3-VL when:
+
+- **Domain-specific tasks**: You need the model to excel at specific visual understanding tasks in your domain
+- **Custom data format**: Your application requires understanding of specialized visual patterns or formats
+- **Performance optimization**: Zero-shot performance doesn't meet your requirements
+- **Grounding tasks**: You need precise object localization and bounding box prediction
+- **Video understanding**: Your application involves temporal reasoning and video analysis
+- **Multi-image reasoning**: Tasks require comparing or relating information across multiple images
+
+## Training Workflow
+
+The typical fine-tuning workflow consists of two main steps:
+
+1. **Customize your dataset**: Download data and implement the dataset configuration
+2. **Modify training scripts**: Configure training parameters and launch training
+
+<Note>
+For images and video data combined training, set `tune_mm_vision=False` in your training configuration.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Dataset Preparation" icon="database" href="/fine-tuning/dataset-preparation">
+    Learn how to format your data for training
+  </Card>
+  <Card title="Training Configuration" icon="gear" href="/fine-tuning/training-configuration">
+    Configure datasets and sampling rates
+  </Card>
+  <Card title="Training Script" icon="terminal" href="/fine-tuning/training-script">
+    Complete training script reference
+  </Card>
+  <Card title="LoRA Training" icon="sliders" href="/fine-tuning/lora">
+    Parameter-efficient fine-tuning with LoRA
+  </Card>
+</CardGroup>

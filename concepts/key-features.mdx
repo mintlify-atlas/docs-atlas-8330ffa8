@@ -1,0 +1,310 @@
+---
+title: Key Features
+description: Comprehensive overview of Qwen3-VL's capabilities including visual agents, spatial perception, video understanding, and more
+---
+
+Qwen3-VL represents a comprehensive upgrade in vision-language capabilities, delivering state-of-the-art performance across multiple domains.
+
+## Visual Agent Capabilities
+
+### GUI Interaction
+
+Qwen3-VL can operate both PC and mobile graphical user interfaces:
+
+- **Element Recognition**: Identifies UI components (buttons, forms, menus)
+- **Function Understanding**: Comprehends the purpose of interface elements
+- **Tool Invocation**: Executes commands and interactions
+- **Task Completion**: Performs multi-step workflows autonomously
+
+<CodeGroup>
+```python Mobile Agent
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "screenshot.png"},
+            {"type": "text", "text": "Click the settings button"}
+        ]
+    }
+]
+```
+
+```python Computer Use
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "desktop.png"},
+            {"type": "text", "text": "Open the browser and search for AI news"}
+        ]
+    }
+]
+```
+</CodeGroup>
+
+### Visual Coding
+
+Generate code from visual inputs:
+
+- **Draw.io diagrams** → Structured diagram definitions
+- **Screenshots** → HTML/CSS/JavaScript code
+- **Design mockups** → Frontend implementations
+- **Video tutorials** → Code reproduction
+
+## Spatial Understanding
+
+### 2D Grounding
+
+**Precise object localization with multiple output formats:**
+
+- Bounding boxes with relative coordinates
+- Point annotations
+- Multiple objects simultaneously
+- Diverse positioning and labeling tasks
+
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "scene.jpg"},
+            {"type": "text", "text": "Locate all people in this image"}
+        ]
+    }
+]
+# Returns: [<box>(x1,y1,x2,y2)</box>, ...]
+```
+
+### 3D Grounding
+
+**Spatial reasoning in three dimensions:**
+
+- Indoor and outdoor object detection
+- 3D bounding box generation
+- Viewpoint understanding
+- Occlusion reasoning
+- Depth perception
+
+<Tip>
+3D grounding enables applications in robotics, embodied AI, and augmented reality scenarios.
+</Tip>
+
+### Advanced Spatial Perception
+
+- **Position Judgment**: Determines object locations relative to each other
+- **Viewpoint Analysis**: Understands camera angles and perspectives
+- **Occlusion Detection**: Identifies when objects block others
+- **Spatial Reasoning**: Infers relationships between objects in 3D space
+
+## Long Context & Video Understanding
+
+### Context Window
+
+- **Native**: 256K tokens
+- **Extended** (with YaRN): Up to 1M tokens
+- **Applications**:
+  - Full book analysis
+  - Hours-long video processing
+  - Complete codebase comprehension
+
+### Video Processing
+
+**Comprehensive video understanding capabilities:**
+
+- **Temporal Modeling**: Precise event timing and sequencing
+- **Second-level Indexing**: Frame-accurate content retrieval
+- **Long Video Support**: Process videos of any length
+- **Full Recall**: Maintain context across entire video duration
+
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "lecture.mp4",
+                "max_pixels": 256 * 32 * 32,
+                "fps": 2.0
+            },
+            {"type": "text", "text": "Summarize this hour-long lecture"}
+        ]
+    }
+]
+```
+
+### Video Features
+
+- **Video OCR**: Extract text from video frames
+- **Video Grounding**: Locate specific moments
+- **Action Recognition**: Identify activities and events
+- **Scene Understanding**: Comprehend context changes
+
+## Enhanced OCR Capabilities
+
+### Language Support
+
+**32 languages** (expanded from 10 in previous versions)
+
+- Latin scripts
+- Chinese (Simplified & Traditional)
+- Japanese, Korean
+- Arabic, Hebrew
+- Cyrillic scripts
+- And 25+ more
+
+### Robust Text Recognition
+
+**Handles challenging conditions:**
+
+- **Low light**: Dimly lit scenes
+- **Blur**: Motion or focus blur
+- **Tilt**: Rotated or skewed text
+- **Rare characters**: Ancient scripts, specialized glyphs
+- **Technical jargon**: Domain-specific terminology
+
+### Document Understanding
+
+- Layout position information
+- Structure parsing for long documents
+- Table extraction
+- Form understanding
+- Qwen HTML format output
+
+<CodeGroup>
+```python General OCR
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "document.pdf"},
+            {"type": "text", "text": "Extract all text preserving layout"}
+        ]
+    }
+]
+```
+
+```python Key Information Extraction
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "invoice.jpg"},
+            {"type": "text", "text": "Extract total amount, date, and vendor name"}
+        ]
+    }
+]
+```
+</CodeGroup>
+
+## Multimodal Reasoning
+
+### Enhanced STEM Performance
+
+**Excels in scientific and mathematical tasks:**
+
+- **Visual Math**: Solve problems from diagrams and equations
+- **Causal Analysis**: Identify cause-effect relationships
+- **Logical Reasoning**: Evidence-based conclusions
+- **Multi-step Problems**: Complex problem decomposition
+
+### Reasoning Capabilities
+
+- Mathematical equation solving
+- Scientific diagram interpretation
+- Chart and graph analysis
+- Statistical reasoning
+- Geometry and spatial problems
+
+## Omni Recognition
+
+### Visual Recognition Scope
+
+**Broader, higher-quality pretraining enables "recognize everything":**
+
+<CardGroup cols={3}>
+  <Card title="People & Characters" icon="user">
+    - Celebrities
+    - Anime characters
+    - Historical figures
+  </Card>
+  
+  <Card title="Objects & Products" icon="box">
+    - Vehicles (cars, planes)
+    - Consumer products
+    - Brand recognition
+  </Card>
+  
+  <Card title="Nature & Places" icon="tree">
+    - Landmarks
+    - Flora and fauna
+    - Geographical features
+  </Card>
+</CardGroup>
+
+### Recognition Features
+
+- **Fine-grained Classification**: Distinguish between similar objects
+- **Attribute Recognition**: Identify colors, materials, styles
+- **Scene Understanding**: Comprehend overall context
+- **Multi-object Recognition**: Handle complex scenes
+
+## Text Understanding
+
+### On Par with Pure LLMs
+
+**Seamless text-vision fusion:**
+
+- No degradation in pure text tasks
+- Unified comprehension across modalities
+- Lossless information processing
+- Consistent performance whether input is text, image, or both
+
+### Applications
+
+- Mixed text and image documents
+- Code with visual diagrams
+- Scientific papers with figures
+- Interleaved content processing
+
+## Performance Highlights
+
+### Visual Tasks
+
+State-of-the-art performance on:
+- General visual question answering
+- Document VQA
+- Chart/diagram understanding
+- Scene text recognition
+- Multi-image reasoning
+
+### Text-Centric Tasks
+
+Competitive with specialized text models on:
+- Language understanding
+- Code generation
+- Mathematical reasoning
+- Knowledge question answering
+
+<Note>
+For detailed benchmark results, see the [Performance](/performance) section.
+</Note>
+
+## Accessibility Features
+
+### Cookbook Examples
+
+Explore hands-on examples for each capability:
+
+- [Omni Recognition](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/omni_recognition.ipynb)
+- [Document Parsing](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/document_parsing.ipynb)
+- [2D Grounding](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/2d_grounding.ipynb)
+- [3D Grounding](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/3d_grounding.ipynb)
+- [Video Understanding](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/video_understanding.ipynb)
+- [Mobile Agent](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/mobile_agent.ipynb)
+- [Computer Use](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/computer_use.ipynb)
+- [Spatial Understanding](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/spatial_understanding.ipynb)
+
+<Tip>
+All cookbooks are available as Jupyter notebooks with Google Colab badges for easy experimentation.
+</Tip>

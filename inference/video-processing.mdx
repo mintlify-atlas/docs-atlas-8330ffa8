@@ -1,0 +1,243 @@
+---
+title: Video Processing
+description: Process video inputs with frame sampling and resolution control
+---
+
+## Basic Video Inference
+
+Qwen3-VL supports video input through URLs, local paths, or frame sequences.
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", 
+    dtype="auto", 
+    device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+# Messages containing a video url (or a local path) and a text query
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-VL/space_woaudio.mp4",
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+
+# Preparation for inference
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+# Inference: Generation of the output
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Video Input Formats
+
+<CodeGroup>
+```python URL
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-VL/space_woaudio.mp4",
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+```
+
+```python Local File
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "file:///path/to/video1.mp4",
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+```
+
+```python Frame Sequence
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": [
+                    "file:///path/to/frame1.jpg",
+                    "file:///path/to/frame2.jpg",
+                    "file:///path/to/frame3.jpg",
+                    "file:///path/to/frame4.jpg",
+                ],
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+```
+</CodeGroup>
+
+## Frame Sampling Control
+
+### Using FPS
+
+Control the frame sampling rate using the `fps` parameter:
+
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-VL/space_woaudio.mp4",
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+
+# Set fps = 4 (default is 2)
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    fps=4
+)
+inputs = inputs.to(model.device)
+```
+
+### Using Fixed Frame Count
+
+Specify the exact number of frames to sample:
+
+```python
+# Set num_frames = 128 and overwrite fps to None
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    num_frames=128,
+    fps=None,
+)
+inputs = inputs.to(model.device)
+```
+
+<Note>
+When using `num_frames`, set `fps=None` to avoid conflicts between the two parameters.
+</Note>
+
+## Video Resolution Control
+
+Configure video resolution budget using the processor:
+
+```python
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+# Budget for video processor
+# Set the number of visual tokens to 256-16384 
+# (32× spatial compression + 2× temporal compression)
+processor.video_processor.size = {
+    "longest_edge": 16384*32*32*2, 
+    "shortest_edge": 256*32*32*2
+}
+```
+
+### Understanding Video Size Parameters
+
+- `longest_edge`: Maximum total pixels across all frames (T × H × W ≤ longest_edge)
+- `shortest_edge`: Minimum total pixel budget for the video
+- For Qwen3-VL: 32× spatial compression + 2× temporal compression
+
+## Performance Optimization
+
+<Note>
+**Recommended for Video Processing:**
+
+Enable `flash_attention_2` for better memory efficiency with videos:
+
+```python
+import torch
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2",
+    device_map="auto",
+)
+```
+
+Installation:
+```bash
+pip install -U flash-attn --no-build-isolation
+```
+</Note>
+
+## Video Backends
+
+When using `qwen-vl-utils`, three video decoding backends are supported:
+
+- **torchvision**: Default backend (slower)
+- **decord**: Faster decoding (Linux recommended)
+- **torchcodec**: Fastest, recommended (requires FFmpeg)
+
+```bash
+# Install with decord support
+pip install qwen-vl-utils[decord]
+
+# Or set backend manually
+export FORCE_QWENVL_VIDEO_READER=torchcodec
+```
+
+### Backend Compatibility
+
+| Backend | HTTP | HTTPS |
+|---------|------|-------|
+| torchvision >= 0.19.0 | ✅ | ✅ |
+| torchvision < 0.19.0 | ❌ | ❌ |
+| decord | ✅ | ❌ |
+| torchcodec | ✅ | ✅ |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Pixel Control" icon="sliders" href="/inference/pixel-control">
+    Advanced video resolution control with qwen-vl-utils
+  </Card>
+  <Card title="Generation Parameters" icon="gear" href="/inference/generation-parameters">
+    Configure temperature, top_p, and other parameters
+  </Card>
+</CardGroup>

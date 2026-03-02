@@ -1,0 +1,270 @@
+---
+title: 'smart_resize'
+description: 'Intelligently resize images while maintaining aspect ratio and constraints'
+---
+
+## Function Signature
+
+```python
+def smart_resize(
+    height: int, 
+    width: int, 
+    factor: int, 
+    min_pixels: Optional[int] = None, 
+    max_pixels: Optional[int] = None
+) -> Tuple[int, int]
+```
+
+## Description
+
+Calculates optimal image dimensions that satisfy multiple constraints simultaneously:
+
+1. Both dimensions are divisible by `factor`
+2. Total pixels are within `[min_pixels, max_pixels]` range
+3. Aspect ratio is maintained as closely as possible
+
+This function is used internally by [fetch_image](/api/utils/fetch-image) and [fetch_video](/api/utils/fetch-video) to ensure images are properly sized for vision-language models.
+
+## Parameters
+
+<ParamField path="height" type="int" required>
+  Original image height in pixels.
+</ParamField>
+
+<ParamField path="width" type="int" required>
+  Original image width in pixels.
+</ParamField>
+
+<ParamField path="factor" type="int" required>
+  Both output dimensions must be divisible by this factor.
+  
+  Typically calculated as: `image_patch_size * SPATIAL_MERGE_SIZE`
+  - For patch size 14: factor = 28
+  - For patch size 16: factor = 32
+</ParamField>
+
+<ParamField path="min_pixels" type="Optional[int]" default="IMAGE_MIN_TOKEN_NUM * factor²">
+  Minimum total pixels allowed in the resized image.
+  
+  Default: `4 * factor²` (IMAGE_MIN_TOKEN_NUM = 4)
+</ParamField>
+
+<ParamField path="max_pixels" type="Optional[int]" default="IMAGE_MAX_TOKEN_NUM * factor²">
+  Maximum total pixels allowed in the resized image.
+  
+  Default: `16384 * factor²` (IMAGE_MAX_TOKEN_NUM = 16384)
+</ParamField>
+
+## Returns
+
+<ResponseField name="resized_height" type="int">
+  New height divisible by `factor`, maintaining aspect ratio within pixel constraints.
+</ResponseField>
+
+<ResponseField name="resized_width" type="int">
+  New width divisible by `factor`, maintaining aspect ratio within pixel constraints.
+</ResponseField>
+
+## Algorithm
+
+The function follows this logic:
+
+1. **Round to factor**: Round both dimensions to nearest multiple of `factor`
+2. **Check max constraint**: If `height * width > max_pixels`:
+   - Calculate scaling factor: `β = sqrt((height * width) / max_pixels)`
+   - Scale down: `new_height = floor(height / β / factor) * factor`
+3. **Check min constraint**: If `height * width < min_pixels`:
+   - Calculate scaling factor: `β = sqrt(min_pixels / (height * width))`
+   - Scale up: `new_height = ceil(height * β / factor) * factor`
+
+## Usage Examples
+
+### Basic Usage
+
+```python
+from qwen_vl_utils import smart_resize
+
+# Resize 1920x1080 image with factor 28
+height, width = smart_resize(
+    height=1080,
+    width=1920,
+    factor=28
+)
+
+print(f"{height}x{width}")  # e.g., 1064x1904 (both divisible by 28)
+assert height % 28 == 0
+assert width % 28 == 0
+```
+
+### With Pixel Constraints
+
+```python
+# Ensure image has between 100K and 1M pixels
+height, width = smart_resize(
+    height=2000,
+    width=3000,
+    factor=28,
+    min_pixels=100_000,
+    max_pixels=1_000_000
+)
+
+pixels = height * width
+assert 100_000 <= pixels <= 1_000_000
+assert height % 28 == 0 and width % 28 == 0
+```
+
+### Image Tokens for Vision Models
+
+```python
+# For Qwen2VL with patch_size=14, SPATIAL_MERGE_SIZE=2
+image_patch_size = 14
+factor = image_patch_size * 2  # 28
+
+# Calculate resize for minimum 4 tokens, maximum 16384 tokens
+min_pixels = 4 * (factor ** 2)        # 4 * 28² = 3,136 pixels
+max_pixels = 16384 * (factor ** 2)    # 16384 * 28² = 12,845,056 pixels
+
+height, width = smart_resize(
+    height=1080,
+    width=1920,
+    factor=factor,
+    min_pixels=min_pixels,
+    max_pixels=max_pixels
+)
+
+# Calculate number of image tokens
+tokens = (height * width) // (factor ** 2)
+print(f"Image will use {tokens} tokens")  # Between 4 and 16384
+```
+
+### Aspect Ratio Preservation
+
+```python
+original_height, original_width = 1080, 1920
+original_ratio = original_width / original_height  # 1.778
+
+resized_height, resized_width = smart_resize(
+    height=original_height,
+    width=original_width,
+    factor=28
+)
+
+resized_ratio = resized_width / resized_height  # ~1.778 (maintained)
+print(f"Aspect ratio change: {abs(resized_ratio - original_ratio):.4f}")  # Very small
+```
+
+## Error Handling
+
+### Aspect Ratio Too Extreme
+
+```python
+try:
+    height, width = smart_resize(
+        height=100,
+        width=50000,  # Aspect ratio > 200
+        factor=28
+    )
+except ValueError as e:
+    print(f"Error: {e}")
+    # absolute aspect ratio must be smaller than 200, got 500.0
+```
+
+The function enforces a maximum aspect ratio of 200:1 to prevent extreme image shapes.
+
+### Invalid Pixel Range
+
+```python
+try:
+    height, width = smart_resize(
+        height=1080,
+        width=1920,
+        factor=28,
+        min_pixels=1_000_000,
+        max_pixels=100_000  # max < min
+    )
+except AssertionError as e:
+    print(f"Error: {e}")
+    # The max_pixels of image must be greater than or equal to min_pixels.
+```
+
+## Constants
+
+```python
+IMAGE_MIN_TOKEN_NUM = 4        # Minimum image tokens
+IMAGE_MAX_TOKEN_NUM = 16384    # Maximum image tokens
+VIDEO_MIN_TOKEN_NUM = 128      # Minimum tokens per video frame
+VIDEO_MAX_TOKEN_NUM = 768      # Maximum tokens per video frame
+MAX_RATIO = 200                # Maximum aspect ratio
+SPATIAL_MERGE_SIZE = 2         # Spatial merge factor
+```
+
+## Real-World Examples
+
+### Common Image Sizes
+
+```python
+# HD image (1920x1080)
+h, w = smart_resize(1080, 1920, 28)
+print(f"HD: {h}x{w}")  # 1064x1904
+
+# 4K image (3840x2160)
+h, w = smart_resize(2160, 3840, 28)
+print(f"4K: {h}x{w}")  # 2156x3836 (scaled down to fit max_pixels)
+
+# Square image (1000x1000)
+h, w = smart_resize(1000, 1000, 28)
+print(f"Square: {h}x{w}")  # 1008x1008
+
+# Portrait image (1080x1920)
+h, w = smart_resize(1920, 1080, 28)
+print(f"Portrait: {h}x{w}")  # 1904x1064
+```
+
+### Different Patch Sizes
+
+```python
+# Qwen2VL (patch_size=14, factor=28)
+h, w = smart_resize(1080, 1920, 28)
+print(f"Qwen2VL: {h}x{w}")
+
+# Qwen3VL (patch_size=16, factor=32)
+h, w = smart_resize(1080, 1920, 32)
+print(f"Qwen3VL: {h}x{w}")
+```
+
+## Integration with Other Functions
+
+### Used in fetch_image
+
+```python
+# fetch_image calls smart_resize internally
+from qwen_vl_utils import fetch_image
+
+image = fetch_image({
+    "image": "file:///path/to/image.jpg",
+    "min_pixels": 100_000,
+    "max_pixels": 1_000_000
+})
+# smart_resize is called with these min/max pixel values
+```
+
+### Used in fetch_video
+
+```python
+# fetch_video calls smart_resize for each frame
+from qwen_vl_utils import fetch_video
+
+video = fetch_video({
+    "video": "file:///path/to/video.mp4",
+    "fps": 2.0,
+    "min_pixels": 128 * 28 * 28,   # Per-frame minimum
+    "max_pixels": 768 * 28 * 28    # Per-frame maximum
+})
+# Each frame is resized using smart_resize
+```
+
+## See Also
+
+- [fetch_image](/api/utils/fetch-image) - Uses smart_resize for image processing
+- [fetch_video](/api/utils/fetch-video) - Uses smart_resize for video frame processing
+- [process_vision_info](/api/utils/process-vision-info) - High-level vision processing function

@@ -1,0 +1,352 @@
+---
+title: LoRA Fine-tuning
+description: Parameter-efficient fine-tuning with LoRA for Qwen3-VL
+---
+
+## Overview
+
+LoRA (Low-Rank Adaptation) is a parameter-efficient fine-tuning technique that significantly reduces the number of trainable parameters while maintaining model performance. Instead of fine-tuning all model parameters, LoRA adds small trainable rank decomposition matrices to specific layers.
+
+### Benefits of LoRA
+
+- **Reduced Memory Usage**: Train large models with less GPU memory
+- **Faster Training**: Fewer parameters to update means faster iterations
+- **Smaller Checkpoints**: LoRA adapters are typically 1-2% the size of full model weights
+- **Easy Deployment**: Swap different LoRA adapters for different tasks without loading multiple full models
+
+## Enabling LoRA
+
+Add LoRA parameters to your training script:
+
+```bash
+torchrun --nproc_per_node=$NPROC_PER_NODE \
+         qwenvl/train/train_qwen.py \
+         --model_name_or_path /path/to/Qwen2.5-VL-3B-Instruct \
+         
+         # LoRA Configuration
+         --lora_enable True \
+         --lora_r 8 \
+         --lora_alpha 16 \
+         --lora_dropout 0.0 \
+         
+         # ... other training arguments
+```
+
+## LoRA Parameters
+
+### Core Parameters
+
+<ParamField path="lora_enable" type="boolean" default="False">
+  Enable LoRA training. Set to `True` to use parameter-efficient fine-tuning.
+</ParamField>
+
+<ParamField path="lora_r" type="integer" default="8">
+  LoRA rank dimension. Controls the bottleneck dimension of the low-rank matrices.
+  
+  **Common values:**
+  - `4`: Minimal parameters, fastest training
+  - `8`: Balanced performance (recommended)
+  - `16`: Higher capacity
+  - `32-64`: Approaching full fine-tuning performance
+</ParamField>
+
+<ParamField path="lora_alpha" type="integer" default="16">
+  LoRA scaling parameter. Controls the magnitude of LoRA updates.
+  
+  **Typical configuration:**
+  - Set to `2 × lora_r` for balanced scaling
+  - Higher values = stronger LoRA influence
+</ParamField>
+
+<ParamField path="lora_dropout" type="float" default="0.0">
+  Dropout probability for LoRA layers.
+  
+  **Recommendations:**
+  - `0.0`: No dropout (default, usually sufficient)
+  - `0.05-0.1`: For larger datasets prone to overfitting
+</ParamField>
+
+## Configuration Examples
+
+### Minimal LoRA (Fastest)
+
+Best for: Quick experimentation, limited compute
+
+```bash
+--lora_enable True \
+--lora_r 4 \
+--lora_alpha 8 \
+--lora_dropout 0.0
+```
+
+**Characteristics:**
+- Smallest adapter size (~0.5-1% of model size)
+- Fastest training
+- May have slightly lower performance on complex tasks
+
+### Balanced LoRA (Recommended)
+
+Best for: Most use cases, good performance-efficiency tradeoff
+
+```bash
+--lora_enable True \
+--lora_r 8 \
+--lora_alpha 16 \
+--lora_dropout 0.0
+```
+
+**Characteristics:**
+- Moderate adapter size (~1-2% of model size)
+- Good training speed
+- Strong performance across most tasks
+
+### High-Capacity LoRA
+
+Best for: Complex tasks, large datasets, when approaching full fine-tuning performance
+
+```bash
+--lora_enable True \
+--lora_r 32 \
+--lora_alpha 64 \
+--lora_dropout 0.05
+```
+
+**Characteristics:**
+- Larger adapter size (~4-8% of model size)
+- Slower training than lower ranks
+- Performance closer to full fine-tuning
+- Consider dropout for regularization
+
+## Complete LoRA Training Script
+
+```bash train_lora.sh
+#!/bin/bash
+
+MASTER_ADDR="127.0.0.1"
+MASTER_PORT=$(shuf -i 20000-29999 -n 1)
+NPROC_PER_NODE=$(nvidia-smi --list-gpus | wc -l)
+
+MODEL_PATH="/path/to/Qwen2.5-VL-3B-Instruct"
+OUTPUT_DIR="./checkpoints_lora"
+
+torchrun --nproc_per_node=$NPROC_PER_NODE \
+         --master_addr=$MASTER_ADDR \
+         --master_port=$MASTER_PORT \
+         qwenvl/train/train_qwen.py \
+         
+         # Model & Dataset
+         --model_name_or_path $MODEL_PATH \
+         --dataset_use "my_dataset%100" \
+         --output_dir $OUTPUT_DIR \
+         
+         # Component Training (LoRA only affects enabled components)
+         --tune_mm_llm True \
+         --tune_mm_vision False \
+         --tune_mm_mlp False \
+         
+         # LoRA Configuration
+         --lora_enable True \
+         --lora_r 8 \
+         --lora_alpha 16 \
+         --lora_dropout 0.0 \
+         
+         # Training Configuration
+         --bf16 \
+         --per_device_train_batch_size 8 \
+         --gradient_accumulation_steps 2 \
+         --learning_rate 2e-4 \
+         --num_train_epochs 3 \
+         
+         # Data Processing
+         --model_max_length 4096 \
+         --max_pixels 576\*28\*28 \
+         --min_pixels 16\*28\*28 \
+         
+         # Schedule & Logging
+         --warmup_ratio 0.03 \
+         --lr_scheduler_type "cosine" \
+         --logging_steps 10 \
+         --save_steps 500 \
+         --save_total_limit 3
+```
+
+<Note>
+With LoRA enabled, you can often increase the batch size since fewer parameters are being updated. Try doubling `per_device_train_batch_size` compared to full fine-tuning.
+</Note>
+
+## LoRA with Component Training
+
+LoRA adapters are applied only to the components you choose to train:
+
+```bash
+# LoRA on language model only
+--tune_mm_llm True \
+--tune_mm_vision False \
+--tune_mm_mlp False \
+--lora_enable True
+
+# LoRA on both LLM and vision encoder
+--tune_mm_llm True \
+--tune_mm_vision True \
+--tune_mm_mlp False \
+--lora_enable True
+```
+
+## Learning Rate Adjustment
+
+LoRA training typically benefits from higher learning rates than full fine-tuning:
+
+| Training Type | Recommended LR Range |
+|---------------|----------------------|
+| Full fine-tuning | `1e-7` to `2e-7` |
+| LoRA (r=8) | `1e-4` to `2e-4` |
+| LoRA (r=32) | `5e-5` to `1e-4` |
+
+```bash
+# LoRA training with appropriate learning rate
+--lora_enable True \
+--lora_r 8 \
+--learning_rate 2e-4  # Higher than full fine-tuning
+```
+
+## Saving and Loading LoRA Adapters
+
+### Checkpoint Structure
+
+LoRA training saves both the adapter weights and the configuration:
+
+```
+checkpoints_lora/
+├── checkpoint-500/
+│   ├── adapter_config.json    # LoRA configuration
+│   ├── adapter_model.bin      # LoRA weights (small!)
+│   └── trainer_state.json     # Training state
+└── checkpoint-1000/
+    └── ...
+```
+
+### Loading for Inference
+
+```python
+from transformers import Qwen2VLForConditionalGeneration
+from peft import PeftModel
+
+# Load base model
+base_model = Qwen2VLForConditionalGeneration.from_pretrained(
+    "/path/to/Qwen2.5-VL-3B-Instruct"
+)
+
+# Load LoRA adapter
+model = PeftModel.from_pretrained(
+    base_model,
+    "./checkpoints_lora/checkpoint-1000"
+)
+
+# Merge adapter for faster inference (optional)
+model = model.merge_and_unload()
+```
+
+## Memory Requirements
+
+Approximate GPU memory usage for different configurations:
+
+### Qwen2.5-VL-3B
+
+| Configuration | GPUs Required | Memory per GPU |
+|---------------|---------------|----------------|
+| Full Fine-tuning | 4x | 24GB |
+| LoRA (r=8) | 2x | 24GB |
+| LoRA (r=8) | 1x | 40GB |
+
+### Qwen2.5-VL-7B
+
+| Configuration | GPUs Required | Memory per GPU |
+|---------------|---------------|----------------|
+| Full Fine-tuning | 8x | 40GB |
+| LoRA (r=8) | 4x | 24GB |
+| LoRA (r=16) | 4x | 40GB |
+
+<Tip>
+For single GPU training with limited memory, use LoRA with `r=4` and enable gradient checkpointing in your DeepSpeed config.
+</Tip>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choosing LoRA Rank">
+    Start with `r=8` and adjust based on results:
+    
+    **Increase rank if:**
+    - Model is underfitting
+    - Task is complex with many nuances
+    - Dataset is large and diverse
+    
+    **Decrease rank if:**
+    - Memory is limited
+    - Training time is critical
+    - Task is relatively simple
+  </Accordion>
+  
+  <Accordion title="Combining with Other Optimizations">
+    LoRA works well with other efficiency techniques:
+    
+    ```bash
+    --lora_enable True \
+    --lora_r 8 \
+    --bf16 \                          # Mixed precision
+    --gradient_checkpointing True \   # Reduce memory
+    --data_packing True               # Improve throughput
+    ```
+  </Accordion>
+  
+  <Accordion title="Multi-task LoRA Adapters">
+    Train separate LoRA adapters for different tasks:
+    
+    ```bash
+    # Task 1: VQA
+    --output_dir ./lora_vqa \
+    --dataset_use "vqa_dataset%100"
+    
+    # Task 2: Captioning
+    --output_dir ./lora_caption \
+    --dataset_use "caption_dataset%100"
+    
+    # Task 3: Grounding
+    --output_dir ./lora_grounding \
+    --dataset_use "grounding_dataset%100"
+    ```
+    
+    Then swap adapters at inference time without reloading the base model.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Warning>
+**Common Issues:**
+
+1. **Underfitting**: If LoRA performance is significantly worse than expected:
+   - Increase `lora_r` (try 16 or 32)
+   - Increase `lora_alpha` proportionally
+   - Increase learning rate
+   - Train for more epochs
+
+2. **Overfitting**: If validation loss increases while training loss decreases:
+   - Add `lora_dropout` (0.05-0.1)
+   - Reduce `lora_r`
+   - Add weight decay
+   - Use data augmentation
+
+3. **Memory Issues**: If still running out of memory with LoRA:
+   - Reduce `lora_r` to 4
+   - Decrease batch size
+   - Enable gradient checkpointing
+   - Use DeepSpeed ZeRO-3
+</Warning>
+
+## Further Reading
+
+- [LoRA: Low-Rank Adaptation of Large Language Models (Paper)](https://arxiv.org/abs/2106.09685)
+- [PEFT Documentation](https://huggingface.co/docs/peft/index)
+- [Training Configuration](/fine-tuning/training-configuration) for dataset setup
+- [Training Script Reference](/fine-tuning/training-script) for full parameter list

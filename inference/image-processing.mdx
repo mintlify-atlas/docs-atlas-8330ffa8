@@ -1,0 +1,173 @@
+---
+title: Image Processing
+description: Process single and multiple images with resolution control
+---
+
+## Multi-Image Inference
+
+Qwen3-VL can process multiple images in a single request, making it ideal for image comparison and analysis tasks.
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", 
+    dtype="auto", 
+    device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+# Messages containing multiple images and a text query
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image1.jpg"},
+            {"type": "image", "image": "file:///path/to/image2.jpg"},
+            {"type": "text", "text": "Identify the similarities between these images."},
+        ],
+    }
+]
+
+# Preparation for inference
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+# Inference: Generation of the output
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Image Input Formats
+
+Supported formats:
+
+<CodeGroup>
+```python Local File
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/your/image.jpg"},
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+```
+
+```python URL
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "http://path/to/your/image.jpg"},
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+```
+
+```python Base64
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "data:image;base64,/9j/..."},
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+```
+</CodeGroup>
+
+## Resolution Control with Processor
+
+Control image resolution using the processor's `size` parameter:
+
+```python
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+# Budget for image processor
+# Since the compression ratio is 32 for Qwen3-VL, we can set the number 
+# of visual tokens to 256-1280 (32× spatial compression)
+processor.image_processor.size = {
+    "longest_edge": 1280*32*32, 
+    "shortest_edge": 256*32*32
+}
+```
+
+### Understanding Size Parameters
+
+- `longest_edge` (max_pixels): Maximum number of pixels allowed (H × W ≤ max_pixels)
+- `shortest_edge` (min_pixels): Minimum allowable pixel count
+- For Qwen3-VL: 32× spatial compression ratio
+
+<Note>
+The size parameters control the visual token budget. Adjust based on your GPU memory and quality requirements.
+</Note>
+
+## Adding Vision IDs
+
+For better reference in multi-image scenarios, add labels to images:
+
+```python
+conversation = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Can you describe these images?"},
+            {"type": "image"},
+            {"type": "image"},
+            {"type": "text", "text": "These are from my vacation."},
+        ],
+    },
+]
+
+# Add vision IDs for better reference
+prompt_with_id = processor.apply_chat_template(
+    conversation, 
+    add_generation_prompt=True, 
+    add_vision_id=True
+)
+# Output: "Can you describe these images?Picture 1: <|vision_start|>..."
+```
+
+## Performance Tips
+
+<Note>
+For multi-image scenarios, enable `flash_attention_2` for better memory efficiency:
+
+```python
+import torch
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2",
+    device_map="auto",
+)
+```
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Pixel Control" icon="sliders" href="/inference/pixel-control">
+    Advanced resolution control with qwen-vl-utils
+  </Card>
+  <Card title="Batch Inference" icon="layer-group" href="/inference/batch-inference">
+    Process multiple requests efficiently
+  </Card>
+</CardGroup>

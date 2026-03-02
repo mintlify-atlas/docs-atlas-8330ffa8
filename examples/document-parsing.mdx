@@ -1,0 +1,66 @@
+---
+title: Document Parsing
+description: Advanced document parsing with layout, position information, and Qwen HTML format
+---
+
+Qwen3-VL provides powerful document parsing capabilities that go beyond simple text extraction. The model can extract text while preserving layout information, positional data, and structured content in Qwen HTML format.
+
+## Capability Overview
+
+The document parsing feature enables you to:
+- Extract text from complex document layouts
+- Preserve layout position information
+- Generate structured output in Qwen HTML format
+- Handle multi-column documents
+- Parse tables, forms, and structured content
+- Maintain reading order and document hierarchy
+
+## Example Usage
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", dtype="auto", device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "path/to/document.jpg",
+            },
+            {"type": "text", "text": "Parse this document and extract all text with layout information."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=2048)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Try it Yourself
+
+Explore the full document parsing cookbook with interactive examples:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/document_parsing.ipynb)
+
+[View on GitHub](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/document_parsing.ipynb)

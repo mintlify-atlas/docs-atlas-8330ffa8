@@ -1,0 +1,69 @@
+---
+title: Running Web UI Demo
+description: Set up and run the interactive web-based interface for Qwen3-VL
+---
+
+Qwen3-VL provides a browser-based user interface that allows you to interact with the model through a web interface. This is useful for testing and demonstrating the model's capabilities.
+
+## Prerequisites
+
+Install the required dependencies:
+
+```bash
+pip install -r requirements_web_demo.txt
+```
+
+## Launch the Web Demo
+
+Run the web demo using the following command:
+
+```bash
+python web_demo_mm.py -c /your/path/to/qwen3vl/weight
+```
+
+After running the command, you'll see a link generated in the terminal:
+
+```
+Running on local: http://127.0.0.1:7860/
+```
+
+Open this link in your browser to interact with the model. You can try text, images, videos, or other multimodal features.
+
+## Docker-Based Web Demo
+
+For a quick start, you can use the pre-built Docker image:
+
+```bash
+cd docker && bash run_web_demo.sh -c /your/path/to/qwen3vl/weight --port 8881
+```
+
+This will launch the web interface on port 8881.
+
+## Features
+
+- **Multi-Modal Input**: Upload and process images, videos, and text
+- **Interactive Interface**: User-friendly web-based chat interface
+- **Real-Time Responses**: Get immediate feedback from the model
+- **Easy Setup**: Simple command-line launch
+
+## Docker Image
+
+To simplify the deployment process, Qwen3-VL provides Docker images with pre-built environments:
+
+```bash
+docker run --gpus all --ipc=host --network=host --rm --name qwen3vl \
+  -it qwenllm/qwenvl:qwen3vl-cu128 bash
+```
+
+### Docker Benefits
+
+- Pre-configured environment
+- GPU support included
+- Only requires driver installation and model files
+- Quick deployment without dependency management
+
+## Tips
+
+- Ensure you have sufficient GPU memory for the model size you're using
+- The web interface supports multiple image formats and video files
+- You can adjust the port number if 7860 is already in use

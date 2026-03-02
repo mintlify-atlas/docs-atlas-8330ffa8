@@ -1,0 +1,195 @@
+---
+title: "QwenTrainer"
+description: "Custom trainer implementation with optimized attention mechanisms and optimizer configurations for Qwen-VL fine-tuning"
+---
+
+## Overview
+
+The `trainer.py` module extends the Hugging Face Trainer with custom implementations optimized for Qwen-VL models. It includes custom attention mechanisms using Flash Attention 2, monkey-patched forward methods for various Qwen model versions, and a specialized optimizer creation method that supports different learning rates for vision tower and multimodal projector components.
+
+## Custom Optimizer Creation
+
+### `create_optimizer()`
+
+Creates an optimizer with separate learning rate configurations for different model components.
+
+<ParamField path="self.args.mm_projector_lr" type="float" default="None">
+  Learning rate for the multimodal projector (merger) module. If set, the projector parameters will use this learning rate instead of the base learning rate.
+</ParamField>
+
+<ParamField path="self.args.vision_tower_lr" type="float" default="None">
+  Learning rate for the vision tower (visual encoder) module. If set, the vision tower parameters will use this learning rate instead of the base learning rate.
+</ParamField>
+
+<ParamField path="self.args.weight_decay" type="float">
+  Weight decay coefficient applied to parameters with decay (excludes bias terms).
+</ParamField>
+
+**Returns:** Configured optimizer instance with parameter groups for:
+- Base model parameters (with and without weight decay)
+- Vision tower parameters (with and without weight decay, if `vision_tower_lr` is set)
+- Multimodal projector parameters (with and without weight decay, if `mm_projector_lr` is set)
+
+## Flash Attention Methods
+
+### `flash_attention_forward()`
+
+Custom Flash Attention 2 forward pass for efficient attention computation.
+
+<ParamField path="module" type="torch.nn.Module" required>
+  The attention module.
+</ParamField>
+
+<ParamField path="query" type="torch.Tensor" required>
+  Query tensor with shape `(batch, head, seq_len, dim)`.
+</ParamField>
+
+<ParamField path="key" type="torch.Tensor" required>
+  Key tensor with shape `(batch, head, seq_len, dim)`.
+</ParamField>
+
+<ParamField path="value" type="torch.Tensor" required>
+  Value tensor with shape `(batch, head, seq_len, dim)`.
+</ParamField>
+
+<ParamField path="attention_mask" type="torch.Tensor" default="None">
+  Cumulative sequence lengths tensor for variable-length attention.
+</ParamField>
+
+<ParamField path="dropout" type="float" default="0.0">
+  Dropout probability for attention weights.
+</ParamField>
+
+<ParamField path="scaling" type="float" default="None">
+  Attention scaling factor.
+</ParamField>
+
+<ParamField path="sliding_window" type="int" default="None">
+  Sliding window size for local attention.
+</ParamField>
+
+<ParamField path="softcap" type="float" default="None">
+  Softcap value for attention logits.
+</ParamField>
+
+**Returns:** Tuple of `(attn_output, None)` where `attn_output` is the attention output tensor.
+
+### `qwen2vl_forward()`
+
+Custom forward method for Qwen2-VL and Qwen2.5-VL attention layers.
+
+<ParamField path="hidden_states" type="torch.Tensor" required>
+  Input hidden states with shape `(batch_size, seq_len, hidden_dim)`.
+</ParamField>
+
+<ParamField path="attention_mask" type="torch.Tensor" default="None">
+  Attention mask tensor.
+</ParamField>
+
+<ParamField path="position_ids" type="torch.LongTensor" default="None">
+  Position indices for positional embeddings.
+</ParamField>
+
+<ParamField path="past_key_values" type="Cache" default="None">
+  Cached key/value states for efficient generation.
+</ParamField>
+
+<ParamField path="output_attentions" type="bool" default="False">
+  Whether to return attention weights.
+</ParamField>
+
+<ParamField path="use_cache" type="bool" default="False">
+  Whether to use key/value caching.
+</ParamField>
+
+<ParamField path="cache_position" type="torch.LongTensor" default="None">
+  Position indices for cache updates.
+</ParamField>
+
+<ParamField path="position_embeddings" type="tuple[torch.Tensor, torch.Tensor]" default="None">
+  Precomputed rotary position embeddings (cos, sin).
+</ParamField>
+
+**Returns:** Tuple of `(attn_output, attn_weights)` where weights may be `None`.
+
+### `qwen3vl_forward()`
+
+Custom forward method for Qwen3-VL and Qwen3-VL-MoE attention layers.
+
+<ParamField path="hidden_states" type="torch.Tensor" required>
+  Input hidden states.
+</ParamField>
+
+<ParamField path="position_embeddings" type="tuple[torch.Tensor, torch.Tensor]" required>
+  Rotary position embeddings (cos, sin).
+</ParamField>
+
+<ParamField path="attention_mask" type="torch.Tensor" default="None">
+  Attention mask tensor.
+</ParamField>
+
+<ParamField path="past_key_values" type="Cache" default="None">
+  Cached key/value states.
+</ParamField>
+
+<ParamField path="cache_position" type="torch.LongTensor" default="None">
+  Position indices for cache updates.
+</ParamField>
+
+**Returns:** Tuple of `(attn_output, attn_weights)`.
+
+## Utility Functions
+
+### `replace_qwen2_vl_attention_class()`
+
+Replaces the default attention forward methods in transformers with optimized Flash Attention implementations for all supported Qwen-VL model variants:
+- Qwen2-VL
+- Qwen2.5-VL  
+- Qwen3-VL
+- Qwen3-VL-MoE
+
+Also replaces causal mask creation functions to optimize for packed training.
+
+### `print_trainable_parameters_visual()`
+
+Prints the trainable status of vision module components.
+
+**Output:**
+- Trainable/non-trainable attention block indices
+- Merger module trainable status
+
+### `print_trainable_parameters()`
+
+Prints the trainable status of language model components.
+
+**Output:**
+- Embed tokens trainable status
+- Trainable/non-trainable decoder layer indices
+
+## Usage Example
+
+```python
+from transformers import TrainingArguments
+from qwenvl.train.trainer import replace_qwen2_vl_attention_class
+
+# Apply Flash Attention optimizations
+replace_qwen2_vl_attention_class()
+
+# Configure training with separate learning rates
+training_args = TrainingArguments(
+    output_dir="./output",
+    learning_rate=2e-5,
+    mm_projector_lr=1e-4,  # Higher LR for projector
+    vision_tower_lr=1e-5,  # Lower LR for vision tower
+    weight_decay=0.01,
+    # ... other arguments
+)
+```
+
+## Notes
+
+- Flash Attention 2 is used by default for all attention computations
+- The custom optimizer supports up to 6 parameter groups with different learning rates
+- Vision tower parameters are identified by "visual" in their name
+- Multimodal projector parameters are identified by "merger" in their name
+- Weight decay is not applied to bias parameters

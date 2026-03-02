@@ -1,0 +1,85 @@
+---
+title: 2D Object Grounding
+description: Precise object grounding with bounding boxes and points
+---
+
+# 2D Object Grounding
+
+Qwen3-VL provides precise 2D object grounding capabilities, allowing you to locate and label objects within images using relative position coordinates. The model supports both bounding boxes and point-based grounding for diverse positioning and labeling tasks.
+
+## Capabilities
+
+Qwen3-VL's 2D grounding uses relative position coordinates to:
+
+- **Bounding Boxes**: Draw rectangular boxes around objects
+- **Point Grounding**: Mark specific locations with coordinate points
+- **Flexible Combinations**: Mix boxes and points for complex annotation tasks
+- **Multi-object Detection**: Ground multiple objects simultaneously
+- **Relative Coordinates**: Position-independent coordinate system (0-1 range)
+
+## How It Works
+
+### Coordinate System
+
+Positions are expressed as relative coordinates:
+- X-axis: 0 (left edge) to 1 (right edge)
+- Y-axis: 0 (top edge) to 1 (bottom edge)
+
+This makes grounding resolution-independent and portable across different image sizes.
+
+### Grounding Formats
+
+1. **Bounding Boxes**: `[x_min, y_min, x_max, y_max]`
+2. **Points**: `[x, y]`
+3. **Combined**: Mix both formats in a single response
+
+## Use Cases
+
+- **Object Detection**: Locate and label objects in images
+- **Annotation**: Generate training data for computer vision models
+- **Visual Search**: Find specific items within images
+- **Quality Control**: Identify defects or anomalies in products
+- **Spatial Analysis**: Analyze object positions and distributions
+- **Interactive Applications**: Enable click-to-identify features
+
+## Try It Out
+
+Explore 2D object grounding with our interactive cookbook:
+
+<Card title="2D Grounding Cookbook" icon="book" href="https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/2d_grounding.ipynb">
+  Using relative position coordinates, it supports both boxes and points, allowing for diverse combinations of positioning and labeling tasks.
+</Card>
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/2d_grounding.ipynb)
+
+## Key Features
+
+- **High Precision**: Accurate object localization
+- **Format Flexibility**: Support for boxes, points, and combinations
+- **Multi-object Support**: Ground multiple items in one pass
+- **Resolution Independent**: Works across different image sizes
+- **Natural Language Queries**: Describe what to ground in plain text
+
+## Advanced Capabilities
+
+### Referring Expression Comprehension
+
+Ground objects based on natural language descriptions:
+- "The red car on the left"
+- "The person wearing glasses"
+- "The largest apple in the bowl"
+
+### Dense Captioning
+
+Generate descriptions for multiple grounded regions in an image.
+
+### Visual Question Answering with Grounding
+
+Answer questions while providing visual evidence through grounding.
+
+## Related Capabilities
+
+- [3D Grounding](/capabilities/grounding-3d) - 3D bounding boxes for spatial scenes
+- [Omni Recognition](/capabilities/omni-recognition) - Identify what objects to ground
+- [Spatial Understanding](/capabilities/spatial-understanding) - Understand spatial relationships
+- [Video Understanding](/capabilities/video-understanding) - Grounding in video frames

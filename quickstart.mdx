@@ -1,80 +1,176 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get started with Qwen3-VL in minutes with a simple image inference example
 ---
 
-## Get started in three steps
+Get up and running with Qwen3-VL in just a few steps. This guide will walk you through your first image inference.
 
-Get your documentation site running locally and make your first customization.
+## Installation
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Install Transformers">
+    Qwen3-VL requires transformers 4.57.0 or higher:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash
+    pip install "transformers>=4.57.0"
+    ```
+  </Step>
 
-### Step 2: Deploy your changes
+  <Step title="Install Optional Dependencies">
+    For optimal performance, install these recommended packages:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash
+    pip install accelerate torch torchvision
+    ```
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Your First Inference
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Here's a complete example to perform image understanding with Qwen3-VL:
 
-### Step 3: Go live
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+# Load the model on available devices
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-8B-Instruct", 
+    dtype="auto", 
+    device_map="auto"
+)
 
-## Next steps
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-8B-Instruct")
 
-Now that you have your docs running, explore these key features:
+# Prepare your message with an image
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+            },
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
 
-<CardGroup cols={2}>
+# Prepare inputs for inference
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+# Generate the output
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+generated_ids_trimmed = [
+    out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, 
+    skip_special_tokens=True, 
+    clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+We recommend starting with the 8B model for development. For production, see the [Model Variants](/concepts/model-variants) guide.
 </Note>
+
+## Image Input Formats
+
+Qwen3-VL supports multiple image input formats:
+
+<Tabs>
+  <Tab title="URL">
+    ```python
+    {
+        "type": "image",
+        "image": "https://example.com/image.jpg"
+    }
+    ```
+  </Tab>
+  <Tab title="Local File">
+    ```python
+    {
+        "type": "image",
+        "image": "file:///path/to/image.jpg"
+    }
+    ```
+  </Tab>
+  <Tab title="Base64">
+    ```python
+    {
+        "type": "image",
+        "image": "data:image;base64,/9j/4AAQSkZJRg..."
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Model Selection
+
+Choose a model size based on your use case:
+
+<CardGroup cols={2}>
+  <Card title="2B / 4B Models" icon="mobile">
+    **Edge deployment** - Run on consumer GPUs or mobile devices
+  </Card>
+  <Card title="8B Model" icon="laptop">
+    **Balanced** - Best for most applications (24GB VRAM)
+  </Card>
+  <Card title="32B Model" icon="server">
+    **High performance** - Production use cases (80GB VRAM)
+  </Card>
+  <Card title="235B MoE Model" icon="brain">
+    **Maximum capability** - Research and specialized tasks (8x80GB)
+  </Card>
+</CardGroup>
+
+## Performance Optimization
+
+For better performance, enable Flash Attention 2:
+
+```bash
+pip install flash-attn --no-build-isolation
+```
+
+Then load the model with:
+
+```python
+import torch
+from transformers import AutoModelForImageTextToText
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-8B-Instruct",
+    torch_dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2",
+    device_map="auto"
+)
+```
+
+<Tip>
+Flash Attention 2 is especially beneficial for multi-image and video scenarios, reducing memory usage and improving speed.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Image Processing" icon="image" href="/inference/image-processing">
+    Learn about multi-image inference and resolution control
+  </Card>
+  <Card title="Video Processing" icon="video" href="/inference/video-processing">
+    Process videos with frame sampling
+  </Card>
+  <Card title="Capabilities" icon="sparkles" href="/capabilities/omni-recognition">
+    Explore OCR, grounding, document parsing, and more
+  </Card>
+  <Card title="Deployment" icon="server" href="/deployment/overview">
+    Deploy with vLLM or SGLang for production
+  </Card>
+</CardGroup>

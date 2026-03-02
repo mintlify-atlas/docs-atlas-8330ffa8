@@ -1,0 +1,95 @@
+---
+title: 3D Grounding
+description: Accurate 3D bounding boxes for indoor and outdoor objects
+---
+
+# 3D Grounding
+
+Qwen3-VL introduces 3D grounding capabilities that provide accurate 3D bounding boxes for both indoor and outdoor objects. This advanced spatial perception enables applications in robotics, autonomous systems, AR/VR, and embodied AI.
+
+## Capabilities
+
+Qwen3-VL's 3D grounding extends object localization into three dimensions:
+
+- **3D Bounding Boxes**: Full volumetric object bounds
+- **Indoor Scenes**: Furniture, appliances, room elements
+- **Outdoor Scenes**: Vehicles, buildings, street furniture
+- **Depth Estimation**: Infer object distance and depth
+- **Spatial Relationships**: Understand 3D positioning between objects
+
+## How It Works
+
+### 3D Coordinate System
+
+3D bounding boxes are represented with:
+- **Position**: X, Y, Z coordinates in 3D space
+- **Dimensions**: Width, height, depth
+- **Orientation**: Rotation angles (pitch, yaw, roll)
+
+This enables full spatial understanding of objects in the scene.
+
+### Scene Understanding
+
+The model analyzes:
+- Perspective and vanishing points
+- Occlusion and depth ordering
+- Relative object sizes
+- Scene geometry and structure
+
+## Use Cases
+
+### Robotics & Embodied AI
+
+- **Navigation**: Help robots understand 3D space for path planning
+- **Manipulation**: Guide robotic arms to grasp and move objects
+- **Scene Understanding**: Build 3D world models for robot operation
+
+### Autonomous Systems
+
+- **Self-driving Vehicles**: Detect and track 3D positions of vehicles, pedestrians
+- **Drones**: Navigate complex 3D environments
+- **Warehouse Automation**: Locate and retrieve items in 3D space
+
+### AR/VR Applications
+
+- **Object Placement**: Position virtual objects realistically in real scenes
+- **Scene Reconstruction**: Build 3D models from 2D images
+- **Spatial Computing**: Enable mixed reality interactions
+
+### Architecture & Design
+
+- **Space Planning**: Analyze room dimensions and furniture placement
+- **Construction**: Measure and model building elements
+- **Interior Design**: Visualize furniture in 3D space
+
+## Try It Out
+
+Explore 3D grounding with our interactive cookbook:
+
+<Card title="3D Grounding Cookbook" icon="book" href="https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/3d_grounding.ipynb">
+  Provide accurate 3D bounding boxes for both indoor and outdoor objects.
+</Card>
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/3d_grounding.ipynb)
+
+## Key Features
+
+- **Advanced Spatial Perception**: Judge object positions, viewpoints, and occlusions
+- **Indoor & Outdoor**: Works in diverse environments
+- **Multi-object Tracking**: Track multiple objects in 3D space
+- **Depth Reasoning**: Infer relative distances and depths
+
+## Technical Highlights
+
+Qwen3-VL achieves 3D grounding through:
+
+- **Monocular Depth Estimation**: Infer depth from single images
+- **Perspective Understanding**: Analyze camera angle and field of view
+- **Geometric Reasoning**: Apply spatial constraints and relationships
+- **Scene Context**: Use surrounding objects to inform 3D understanding
+
+## Related Capabilities
+
+- [2D Grounding](/capabilities/grounding-2d) - 2D object localization
+- [Spatial Understanding](/capabilities/spatial-understanding) - Spatial reasoning and relationships
+- [Omni Recognition](/capabilities/omni-recognition) - Identify objects in 3D space

@@ -1,0 +1,184 @@
+---
+title: Computer Use Agent
+description: Computer and web control with GUI interaction
+---
+
+# Computer Use Agent
+
+Qwen3-VL's computer use agent enables intelligent interaction with desktop computers and web browsers. The model can locate UI elements, understand their functions, invoke tools, and complete complex tasks across computer interfaces.
+
+## Capabilities
+
+### Visual Agent for Computer Control
+
+Qwen3-VL's computer use agent can:
+
+- **Desktop Element Recognition**: Identify windows, menus, buttons, and UI components
+- **Web Element Detection**: Recognize webpage elements and interactive components
+- **Function Understanding**: Comprehend what each UI element does
+- **Tool Invocation**: Execute actions through detected UI elements
+- **Multi-step Task Completion**: Perform complex workflows automatically
+- **Cross-application Control**: Work across multiple applications and windows
+
+### GUI Interaction Types
+
+- **Mouse Actions**: Click, double-click, right-click, drag-and-drop
+- **Keyboard Input**: Type text, use shortcuts, and hotkeys
+- **Window Management**: Switch between windows, resize, minimize, maximize
+- **Web Navigation**: Browse websites, fill forms, click links
+- **File Operations**: Open, save, move, and manage files
+
+## How It Works
+
+### Visual Understanding
+
+The computer use agent:
+
+1. **Analyzes Screenshots**: Processes desktop and browser screenshots
+2. **Identifies Elements**: Detects interactive UI components
+3. **Understands Context**: Comprehends application state and functionality
+4. **Plans Actions**: Determines optimal sequence of steps
+5. **Executes Tasks**: Performs actions to accomplish objectives
+6. **Validates Results**: Confirms successful task completion
+
+### Element Grounding
+
+- Uses 2D grounding to locate UI elements precisely
+- Identifies clickable areas and interaction zones
+- Understands spatial layout of interfaces
+- Tracks element positions across state changes
+- Handles dynamic and responsive interfaces
+
+## Use Cases
+
+### Workflow Automation
+
+- **Repetitive Tasks**: Automate routine computer operations
+- **Data Processing**: Extract, transform, and load data across applications
+- **Report Generation**: Create reports by gathering data from multiple sources
+- **Batch Operations**: Process multiple files or items systematically
+
+### Software Testing
+
+- **UI Testing**: Automate desktop and web application testing
+- **End-to-end Testing**: Test complete user workflows
+- **Regression Testing**: Verify functionality across software updates
+- **Cross-platform Testing**: Test applications on different operating systems
+
+### Web Automation
+
+- **Web Scraping**: Extract information from websites
+- **Form Filling**: Automate data entry on web forms
+- **Web Testing**: Test web applications and websites
+- **Content Management**: Manage content across web platforms
+
+### Accessibility
+
+- **Screen Reader Enhancement**: Improve desktop accessibility
+- **Voice Control**: Enable voice-based computer control
+- **Assistive Navigation**: Help users navigate complex interfaces
+- **Alternative Input Methods**: Support diverse interaction modalities
+
+### Research & Monitoring
+
+- **Information Gathering**: Collect data from multiple sources
+- **System Monitoring**: Track application states and outputs
+- **Competitive Analysis**: Monitor competitor websites and applications
+
+## Try It Out
+
+Explore computer use agent capabilities with our interactive cookbook:
+
+<Card title="Computer-Use Agent Cookbook" icon="book" href="https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/computer_use.ipynb">
+  Locate and think for controlling computers and Web.
+</Card>
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/computer_use.ipynb)
+
+## Key Features
+
+### Visual Agent Capabilities
+
+Qwen3-VL's computer use agent operates through:
+
+- **GUI Recognition**: Identifies desktop and web UI elements
+- **Function Comprehension**: Understands what UI elements do
+- **Tool Invocation**: Executes interactions with UI components
+- **Task Planning**: Breaks down complex objectives into steps
+- **Contextual Awareness**: Maintains understanding across windows and applications
+
+### Intelligent Control
+
+- **Natural Language Commands**: Describe tasks in plain language
+- **Error Recovery**: Adapt when expected UI elements change
+- **Multi-application Workflows**: Navigate across different programs
+- **State Management**: Track and remember application states
+- **Dynamic Adaptation**: Adjust to UI changes and variations
+
+## Technical Approach
+
+### Element Detection
+
+- Advanced visual perception for UI element identification
+- Precise 2D grounding for element localization
+- Recognition of common desktop and web UI patterns
+- Support for various screen sizes and resolutions
+- Handling of overlapping windows and complex layouts
+
+### Action Planning & Execution
+
+- Decompose complex tasks into atomic actions
+- Determine optimal action sequences
+- Validate preconditions before actions
+- Confirm successful action completion
+- Handle errors and exceptions gracefully
+
+## Example Tasks
+
+### Desktop Operations
+
+- "Open Photoshop and create a new document with specific dimensions"
+- "Find all PDF files in Downloads folder and move them to Documents"
+- "Take a screenshot and email it to a contact"
+- "Install a software application from a downloaded installer"
+
+### Web Operations
+
+- "Search for a topic and summarize the top 3 results"
+- "Fill out this registration form with my information"
+- "Compare prices for a product across multiple websites"
+- "Download all images from a specific webpage"
+
+### Cross-application Workflows
+
+- "Extract data from a spreadsheet and create a presentation"
+- "Copy text from a PDF and search for it online"
+- "Monitor a webpage and send an alert when it changes"
+
+## Safety & Best Practices
+
+When using computer use agent capabilities:
+
+- **Authorization**: Always obtain proper permission for automated actions
+- **Privacy**: Respect user data and privacy
+- **Security**: Implement appropriate security measures
+- **Validation**: Verify actions before execution
+- **Monitoring**: Supervise automated processes
+- **Error Handling**: Implement robust error recovery
+- **Compliance**: Follow application terms of service and legal requirements
+
+## Platform Support
+
+- **Operating Systems**: Windows, macOS, Linux
+- **Browsers**: Chrome, Firefox, Safari, Edge
+- **Applications**: Wide variety of desktop applications
+- **Screen Resolutions**: Adaptive to different displays
+
+## Related Capabilities
+
+- [Mobile Agent](/capabilities/mobile-agent) - Mobile phone control and interaction
+- [2D Grounding](/capabilities/grounding-2d) - Locate UI elements precisely
+- [Omni Recognition](/capabilities/omni-recognition) - Identify UI components and icons
+- [OCR](/capabilities/ocr) - Extract text from UI elements
+- [Spatial Understanding](/capabilities/spatial-understanding) - Understand interface layouts
+- [Visual Coding](/capabilities/visual-coding) - Generate code from UI screenshots

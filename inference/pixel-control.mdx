@@ -1,0 +1,311 @@
+---
+title: Pixel Control
+description: Fine-grained control over image and video resolution using processor settings and qwen-vl-utils
+---
+
+## Overview
+
+Qwen3-VL provides multiple ways to control the resolution of images and videos, allowing you to balance quality and computational efficiency.
+
+## Official Processor Control
+
+### Image Processor Configuration
+
+The `size['longest_edge']` parameter corresponds to `max_pixels`, and `size['shortest_edge']` corresponds to `min_pixels`.
+
+```python
+from transformers import AutoProcessor
+
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+# Budget for image processor
+# Since the compression ratio is 32 for Qwen3-VL, we can set the number 
+# of visual tokens of a single image to 256-1280 (32× spatial compression)
+processor.image_processor.size = {
+    "longest_edge": 1280*32*32,  # max_pixels
+    "shortest_edge": 256*32*32   # min_pixels
+}
+```
+
+### Video Processor Configuration
+
+For videos, the parameters control total pixels across all frames.
+
+```python
+# Budget for video processor
+# Set the number of visual tokens to 256-16384 
+# (32× spatial compression + 2× temporal compression)
+processor.video_processor.size = {
+    "longest_edge": 16384*32*32*2,  # T×H×W must not exceed this
+    "shortest_edge": 256*32*32*2    # Minimum total pixel budget
+}
+```
+
+<Note>
+**Compression Ratios for Qwen3-VL:**
+- Images: 32× spatial compression
+- Videos: 32× spatial + 2× temporal compression
+
+For example, setting visual tokens to 1280 means `max_pixels = 1280 × 32 × 32 = 1,310,720`
+</Note>
+
+## Using qwen-vl-utils
+
+The `qwen-vl-utils` library provides per-input resolution control.
+
+### Installation
+
+```bash
+pip install qwen-vl-utils==0.0.14
+# Recommended: Install with decord for faster video loading
+pip install qwen-vl-utils[decord]
+```
+
+### Basic Setup for Qwen3-VL
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+from qwen_vl_utils import process_vision_info
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", 
+    dtype="auto", 
+    device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+```
+
+<Note>
+For Qwen3-VL, set `image_patch_size=16` and `return_video_metadata=True` when using `process_vision_info`.
+</Note>
+
+## Image Resolution Control
+
+### Method 1: Exact Dimensions
+
+Specify exact `resized_height` and `resized_width` (rounded to nearest multiple of 32):
+
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                "resized_height": 280,
+                "resized_width": 420,
+            },
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+images, videos = process_vision_info(messages, image_patch_size=16)
+
+# Since qwen-vl-utils has resized the images/videos,
+# pass do_resize=False to avoid duplicate operation!
+inputs = processor(text=text, images=images, videos=videos, do_resize=False, return_tensors="pt")
+inputs = inputs.to(model.device)
+```
+
+### Method 2: Min/Max Pixels
+
+Define `min_pixels` and `max_pixels` to maintain aspect ratio:
+
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                "min_pixels": 50176,
+                "max_pixels": 50176,
+            },
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+images, videos = process_vision_info(messages, image_patch_size=16)
+
+inputs = processor(text=text, images=images, videos=videos, do_resize=False, return_tensors="pt")
+inputs = inputs.to(model.device)
+```
+
+## Video Resolution Control
+
+### Per-Video Configuration
+
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen2-VL/space_woaudio.mp4",
+                "min_pixels": 4 * 32 * 32,
+                "max_pixels": 256 * 32 * 32,
+                "total_pixels": 20480 * 32 * 32,
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+images, videos, video_kwargs = process_vision_info(
+    messages, 
+    image_patch_size=16, 
+    return_video_kwargs=True, 
+    return_video_metadata=True
+)
+
+# Split videos and metadata
+if videos is not None:
+    videos, video_metadatas = zip(*videos)
+    videos, video_metadatas = list(videos), list(video_metadatas)
+else:
+    video_metadatas = None
+
+inputs = processor(
+    text=text, 
+    images=images, 
+    videos=videos, 
+    video_metadata=video_metadatas, 
+    return_tensors="pt", 
+    do_resize=False, 
+    **video_kwargs
+)
+inputs = inputs.to(model.device)
+```
+
+### Video Parameters
+
+- `min_pixels`: Minimum pixels per frame
+- `max_pixels`: Maximum pixels per frame
+- `total_pixels`: Total pixel budget across all frames (recommended < 24576 × 32 × 32)
+- `fps`: Frame sampling rate (e.g., `2.0` for 2 frames per second)
+
+## Frame Sampling with qwen-vl-utils
+
+### Frame List as Video
+
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": [
+                    "file:///path/to/frame1.jpg",
+                    "file:///path/to/frame2.jpg",
+                    "file:///path/to/frame3.jpg",
+                    "file:///path/to/frame4.jpg",
+                ],
+                "sample_fps": "1",  # Frame sampling rate for timestamps
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+```
+
+### Video File with FPS Control
+
+```python
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "file:///path/to/video1.mp4",
+                "max_pixels": 360 * 420,
+                "fps": 1.0,
+            },
+            {"type": "text", "text": "Describe this video."},
+        ],
+    }
+]
+```
+
+## Important: Avoiding Duplicate Resizing
+
+<Warning>
+When using `qwen-vl-utils`, always set `do_resize=False` in the processor to avoid duplicate resizing:
+
+```python
+inputs = processor(
+    text=text, 
+    images=images, 
+    videos=videos, 
+    do_resize=False,  # Critical!
+    return_tensors="pt"
+)
+```
+</Warning>
+
+## Complete Example
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+from qwen_vl_utils import process_vision_info
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", 
+    dtype="auto", 
+    device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
+                "min_pixels": 50176,
+                "max_pixels": 50176,
+            },
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+
+# Preparation for inference with qwen-vl-utils
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+images, videos = process_vision_info(messages, image_patch_size=16)
+
+# Set do_resize=False to avoid duplicate resizing
+inputs = processor(text=text, images=images, videos=videos, do_resize=False, return_tensors="pt")
+inputs = inputs.to(model.device)
+
+# Inference
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Generation Parameters" icon="gear" href="/inference/generation-parameters">
+    Configure temperature, top_p, and sampling parameters
+  </Card>
+  <Card title="Batch Inference" icon="layer-group" href="/inference/batch-inference">
+    Process multiple requests efficiently
+  </Card>
+</CardGroup>

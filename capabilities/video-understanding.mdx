@@ -1,0 +1,114 @@
+---
+title: Video Understanding
+description: Video OCR, long video understanding, and video grounding
+---
+
+# Video Understanding
+
+Qwen3-VL delivers exceptional video understanding capabilities, including improved video OCR, long video comprehension, and temporal grounding. The model can process hours of video content with full recall and second-level indexing.
+
+## Capabilities
+
+### Video OCR
+
+- **Text Extraction**: Read text appearing in video frames
+- **Subtitle Recognition**: Extract and transcribe on-screen text
+- **Motion Tolerance**: Handle moving cameras and text
+- **Multi-language**: OCR support for 32 languages in video
+
+### Long Video Understanding
+
+- **Extended Context**: Native 256K context, expandable to 1M tokens
+- **Full Recall**: Remember details from hours of video
+- **Second-level Indexing**: Locate specific moments precisely
+- **Temporal Coherence**: Track events and changes across time
+
+### Video Grounding
+
+- **Temporal Localization**: Find when events occur in video
+- **Object Tracking**: Follow objects across frames
+- **Event Detection**: Identify specific actions and occurrences
+- **Timestamp Generation**: Provide precise time markers
+
+## How It Works
+
+### Interleaved-MRoPE Architecture
+
+Qwen3-VL uses Interleaved-MRoPE (Multi-Resolution Rope) for video understanding:
+- **Full-frequency Allocation**: Optimized positional embeddings for time, width, and height
+- **Long-horizon Reasoning**: Enhanced capability for extended video sequences
+- **Temporal Modeling**: Better understanding of events over time
+
+### Text-Timestamp Alignment
+
+The model features precise timestamp-grounded event localization:
+- Move beyond traditional temporal RoPE
+- Link descriptions to exact video moments
+- Enable frame-accurate temporal queries
+
+## Use Cases
+
+### Content Analysis
+
+- **Video Summarization**: Generate summaries of long videos
+- **Highlight Detection**: Find key moments automatically
+- **Content Moderation**: Analyze video content for compliance
+- **Sports Analysis**: Track plays, scores, and events
+
+### Accessibility
+
+- **Video Captioning**: Generate descriptions for video content
+- **Subtitle Generation**: Create accurate transcriptions
+- **Audio Description**: Describe visual elements for accessibility
+
+### Media & Entertainment
+
+- **Content Indexing**: Make videos searchable by content
+- **Scene Detection**: Identify and catalog different scenes
+- **Character Tracking**: Follow characters throughout videos
+- **Event Timeline**: Build timelines of video events
+
+### Security & Surveillance
+
+- **Activity Recognition**: Detect specific actions and behaviors
+- **Anomaly Detection**: Identify unusual events
+- **Object Tracking**: Follow people and objects over time
+
+## Try It Out
+
+Explore video understanding with our interactive cookbook:
+
+<Card title="Video Understanding Cookbook" icon="book" href="https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/video_understanding.ipynb">
+  Better video OCR, long video understanding, and video grounding.
+</Card>
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/video_understanding.ipynb)
+
+## Key Features
+
+- **Long Context**: Process hours of video content
+- **Frame Sampling Control**: Adjust FPS and frame selection
+- **Temporal Grounding**: Locate events with second-level precision
+- **Multi-modal Integration**: Combine visual and text understanding
+
+## Technical Capabilities
+
+### Video Processing
+
+- Support for various video formats (MP4, AVI, etc.)
+- URL and local file support
+- Configurable frame sampling (FPS control)
+- Batch processing for multiple videos
+
+### Advanced Features
+
+- **Video QA**: Answer questions about video content
+- **Video Captioning**: Generate descriptions for video clips
+- **Action Recognition**: Identify actions and activities
+- **Scene Understanding**: Comprehend complex video scenes
+
+## Related Capabilities
+
+- [OCR](/capabilities/ocr) - Text extraction in video frames
+- [2D Grounding](/capabilities/grounding-2d) - Object localization in frames
+- [Spatial Understanding](/capabilities/spatial-understanding) - Understand spatial dynamics in video

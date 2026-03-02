@@ -1,0 +1,259 @@
+---
+title: "Training Arguments"
+description: "Configuration dataclasses for model initialization, data processing, and training"
+---
+
+## ModelArguments
+
+Configuration for model initialization and component fine-tuning.
+
+<ParamField path="model_name_or_path" type="str" default="Qwen/Qwen2.5-VL-3B-Instruct">
+  Path to pretrained model or model identifier from Hugging Face Hub. Supports:
+  - `Qwen/Qwen2-VL-*`
+  - `Qwen/Qwen2.5-VL-*`
+  - `Qwen/Qwen3-VL-*`
+  - `Qwen/Qwen3-VL-MoE-*`
+  - Local paths to saved models
+</ParamField>
+
+<ParamField path="tune_mm_llm" type="bool" default="False">
+  Whether to fine-tune the language model (LLM) component. When `False`, the LLM parameters are frozen during training.
+</ParamField>
+
+<ParamField path="tune_mm_mlp" type="bool" default="False">
+  Whether to fine-tune the multimodal projector (MLP/merger) component. This module projects vision features into the language model space.
+</ParamField>
+
+<ParamField path="tune_mm_vision" type="bool" default="False">
+  Whether to fine-tune the vision tower component. When `False`, the vision encoder parameters are frozen.
+</ParamField>
+
+### Usage Example
+
+```python
+from dataclasses import dataclass
+from qwenvl.train.argument import ModelArguments
+
+model_args = ModelArguments(
+    model_name_or_path="Qwen/Qwen2.5-VL-7B-Instruct",
+    tune_mm_llm=True,        # Fine-tune language model
+    tune_mm_mlp=True,        # Fine-tune projector
+    tune_mm_vision=False     # Keep vision tower frozen
+)
+```
+
+## DataArguments
+
+Configuration for data processing and vision-language inputs.
+
+<ParamField path="dataset_use" type="str" default="">
+  Comma-separated list of dataset names to use for training. Dataset names should be registered in the data list configuration.
+  
+  Example: `"vqa,caption,ocr"`
+</ParamField>
+
+<ParamField path="data_flatten" type="bool" default="False">
+  Whether to flatten data sequences for packed training. When enabled, multiple sequences can be packed into a single training example for efficiency.
+</ParamField>
+
+<ParamField path="data_packing" type="bool" default="False">
+  Whether to enable data packing. Packs multiple examples together to minimize padding and improve GPU utilization.
+</ParamField>
+
+<ParamField path="base_interval" type="int" default="2">
+  Base interval for vision processing grid calculations.
+</ParamField>
+
+### Image Processing Parameters
+
+<ParamField path="max_pixels" type="int" default="451584">
+  Maximum number of pixels for image inputs. Default is `28 * 28 * 576 = 451,584` pixels.
+  
+  Controls the maximum resolution after dynamic resolution processing.
+</ParamField>
+
+<ParamField path="min_pixels" type="int" default="12544">
+  Minimum number of pixels for image inputs. Default is `28 * 28 * 16 = 12,544` pixels.
+  
+  Controls the minimum resolution for image processing.
+</ParamField>
+
+### Video Processing Parameters
+
+<ParamField path="video_max_frames" type="int" default="8">
+  Maximum number of frames to extract from video inputs. Videos longer than this will be sampled.
+</ParamField>
+
+<ParamField path="video_min_frames" type="int" default="4">
+  Minimum number of frames to extract from video inputs.
+</ParamField>
+
+<ParamField path="video_max_pixels" type="int" default="802816">
+  Maximum number of pixels per frame for video inputs. Default is `1024 * 28 * 28 = 802,816` pixels.
+</ParamField>
+
+<ParamField path="video_min_pixels" type="int" default="200704">
+  Minimum number of pixels per frame for video inputs. Default is `256 * 28 * 28 = 200,704` pixels.
+</ParamField>
+
+<ParamField path="video_fps" type="float" default="2.0">
+  Target frames per second for video sampling. Videos will be resampled to this FPS before frame extraction.
+</ParamField>
+
+### Usage Example
+
+```python
+from qwenvl.train.argument import DataArguments
+
+data_args = DataArguments(
+    dataset_use="vqa,caption",
+    data_packing=True,
+    data_flatten=True,
+    max_pixels=28 * 28 * 768,      # Higher resolution
+    min_pixels=28 * 28 * 16,
+    video_max_frames=16,            # More frames
+    video_fps=2.0
+)
+```
+
+## TrainingArguments
+
+Extends `transformers.TrainingArguments` with additional parameters for vision-language model training.
+
+### Base Parameters
+
+<ParamField path="cache_dir" type="str" default="None">
+  Directory to store downloaded models and datasets cache.
+</ParamField>
+
+<ParamField path="optim" type="str" default="adamw_torch">
+  Optimizer to use. Options include:
+  - `adamw_torch` - PyTorch AdamW
+  - `adamw_hf` - Hugging Face AdamW
+  - `sgd` - Stochastic Gradient Descent
+  - `adafactor` - Memory-efficient Adafactor
+</ParamField>
+
+<ParamField path="model_max_length" type="int" default="512">
+  Maximum sequence length. Sequences will be right-padded and truncated to this length.
+  
+  Consider increasing for long-form VQA or detailed image descriptions.
+</ParamField>
+
+### Component-Specific Learning Rates
+
+<ParamField path="mm_projector_lr" type="float" default="None">
+  Learning rate for the multimodal projector (merger) module. When set, overrides the base learning rate for projector parameters.
+  
+  Typical values: `1e-4` to `5e-4` (often higher than base LR).
+</ParamField>
+
+<ParamField path="vision_tower_lr" type="float" default="None">
+  Learning rate for the vision tower. When set, overrides the base learning rate for vision encoder parameters.
+  
+  Typical values: `1e-6` to `1e-5` (often lower than base LR to preserve pretrained features).
+</ParamField>
+
+### LoRA Configuration
+
+<ParamField path="lora_enable" type="bool" default="False">
+  Whether to use LoRA (Low-Rank Adaptation) for parameter-efficient fine-tuning.
+</ParamField>
+
+<ParamField path="lora_r" type="int" default="64">
+  LoRA rank. Higher values provide more capacity but increase trainable parameters.
+  
+  Typical values: 8, 16, 32, 64, 128
+</ParamField>
+
+<ParamField path="lora_alpha" type="int" default="128">
+  LoRA scaling parameter. Controls the magnitude of LoRA updates.
+  
+  Often set to 2x the LoRA rank (e.g., `lora_alpha = 2 * lora_r`).
+</ParamField>
+
+<ParamField path="lora_dropout" type="float" default="0.0">
+  Dropout probability for LoRA layers. Can help with regularization.
+  
+  Typical values: 0.0 to 0.1
+</ParamField>
+
+### Usage Example
+
+```python
+from qwenvl.train.argument import TrainingArguments
+
+training_args = TrainingArguments(
+    output_dir="./output",
+    
+    # Learning rates
+    learning_rate=2e-5,           # Base LLM learning rate
+    mm_projector_lr=2e-4,         # Higher for projector
+    vision_tower_lr=1e-5,         # Lower for vision tower
+    
+    # Sequence length
+    model_max_length=2048,
+    
+    # Optimizer
+    optim="adamw_torch",
+    weight_decay=0.01,
+    
+    # LoRA configuration
+    lora_enable=True,
+    lora_r=64,
+    lora_alpha=128,
+    lora_dropout=0.05,
+    
+    # Standard training arguments
+    num_train_epochs=3,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=8,
+    warmup_steps=100,
+    logging_steps=10,
+    save_strategy="steps",
+    save_steps=500,
+)
+```
+
+## Complete Training Configuration
+
+```python
+from qwenvl.train.argument import (
+    ModelArguments,
+    DataArguments, 
+    TrainingArguments
+)
+
+# Model configuration
+model_args = ModelArguments(
+    model_name_or_path="Qwen/Qwen2.5-VL-7B-Instruct",
+    tune_mm_llm=True,
+    tune_mm_mlp=True,
+    tune_mm_vision=False
+)
+
+# Data configuration
+data_args = DataArguments(
+    dataset_use="custom_vqa,coco_caption",
+    data_packing=True,
+    max_pixels=28 * 28 * 768,
+    video_max_frames=8,
+    video_fps=2.0
+)
+
+# Training configuration
+training_args = TrainingArguments(
+    output_dir="./qwen-vl-finetuned",
+    learning_rate=2e-5,
+    mm_projector_lr=2e-4,
+    vision_tower_lr=1e-5,
+    model_max_length=2048,
+    optim="adamw_torch",
+    num_train_epochs=3,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=8,
+    lora_enable=True,
+    lora_r=64,
+    lora_alpha=128,
+)
+```

@@ -1,0 +1,66 @@
+---
+title: Multimodal Coding
+description: Generate accurate code from images and videos, including Draw.io, HTML, CSS, and JavaScript
+---
+
+Qwen3-VL excels at multimodal coding, generating accurate code based on rigorous comprehension of visual information. The model can convert images and videos into various code formats including Draw.io diagrams, HTML, CSS, and JavaScript.
+
+## Capability Overview
+
+The multimodal coding feature enables you to:
+- Generate code from images and screenshots
+- Create Draw.io diagrams from visual input
+- Convert designs to HTML/CSS/JavaScript
+- Understand UI/UX designs and implement them
+- Extract code from code screenshots
+- Generate structured code from flowcharts and diagrams
+
+## Example Usage
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", dtype="auto", device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "image": "path/to/design.jpg",
+            },
+            {"type": "text", "text": "Generate HTML and CSS code to recreate this design."},
+        ],
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs, max_new_tokens=2048)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Try it Yourself
+
+Explore the full multimodal coding cookbook with interactive examples:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/mmcode.ipynb)
+
+[View on GitHub](https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/mmcode.ipynb)

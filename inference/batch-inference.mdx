@@ -1,0 +1,229 @@
+---
+title: Batch Inference
+description: Process multiple requests efficiently with batching and padding
+---
+
+## Overview
+
+Batch inference allows you to process multiple requests simultaneously, improving throughput and efficiency.
+
+## Basic Batch Inference
+
+```python
+from transformers import AutoModelForImageTextToText, AutoProcessor
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct", 
+    dtype="auto", 
+    device_map="auto"
+)
+processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-235B-A22B-Instruct")
+
+# For batch generation, padding_side should be set to left!
+processor.tokenizer.padding_side = 'left'
+
+# Sample messages for batch inference
+messages1 = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image1.jpg"},
+            {"type": "image", "image": "file:///path/to/image2.jpg"},
+            {"type": "text", "text": "What are the common elements in these pictures?"},
+        ],
+    }
+]
+
+messages2 = [
+    {"role": "system", "content": [{"type": "text", "text": "You are a helpful assistant."}]},
+    {"role": "user", "content": [{"type": "text", "text": "Who are you?"}]},
+]
+
+# Combine messages for batch processing
+messages = [messages1, messages2]
+
+# Preparation for inference
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    padding=True  # padding should be set for batch generation!
+)
+inputs = inputs.to(model.device)
+
+# Inference: Generation of the output
+generated_ids = model.generate(**inputs, max_new_tokens=128)
+generated_ids_trimmed = [
+    out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+]
+output_text = processor.batch_decode(
+    generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+)
+print(output_text)
+```
+
+## Key Considerations
+
+<Warning>
+**Important:** For batch generation, you must:
+
+1. Set `padding_side = 'left'` on the tokenizer
+2. Enable `padding=True` in `apply_chat_template`
+</Warning>
+
+### Padding Configuration
+
+```python
+# Required: Set padding to left side
+processor.tokenizer.padding_side = 'left'
+
+# Required: Enable padding in template
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    padding=True  # Must be True for batching
+)
+```
+
+## Mixed Content Batching
+
+You can batch requests with different content types:
+
+```python
+# Batch 1: Multiple images
+messages1 = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image1.jpg"},
+            {"type": "image", "image": "file:///path/to/image2.jpg"},
+            {"type": "text", "text": "Compare these images."},
+        ],
+    }
+]
+
+# Batch 2: Single image
+messages2 = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image3.jpg"},
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+
+# Batch 3: Text only
+messages3 = [
+    {
+        "role": "user",
+        "content": [{"type": "text", "text": "What is the capital of France?"}],
+    }
+]
+
+# Process all together
+messages = [messages1, messages2, messages3]
+```
+
+## Batch with Video Content
+
+```python
+# Batch with video and image
+messages1 = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "video",
+                "video": "file:///path/to/video.mp4",
+            },
+            {"type": "text", "text": "Summarize this video."},
+        ],
+    }
+]
+
+messages2 = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image.jpg"},
+            {"type": "text", "text": "Describe this image."},
+        ],
+    }
+]
+
+processor.tokenizer.padding_side = 'left'
+messages = [messages1, messages2]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+    padding=True
+)
+```
+
+## Performance Tips
+
+<Note>
+**Optimization Recommendations:**
+
+1. **Group similar requests**: Batch requests with similar lengths to minimize padding overhead
+2. **Use flash_attention_2**: Significantly improves batch processing speed
+3. **Adjust batch size**: Balance between throughput and memory usage
+4. **Monitor GPU memory**: Larger batches require more VRAM
+</Note>
+
+### Enable Flash Attention
+
+```python
+import torch
+
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-235B-A22B-Instruct",
+    dtype=torch.bfloat16,
+    attn_implementation="flash_attention_2",
+    device_map="auto",
+)
+```
+
+## Memory Considerations
+
+Batch size impacts memory usage:
+
+- **Small batches (2-4)**: Better for mixed content types
+- **Medium batches (4-8)**: Good balance for similar requests
+- **Large batches (8+)**: Best for uniform, text-only requests
+
+<Warning>
+Video content uses significantly more memory than images. Reduce batch size when processing videos.
+</Warning>
+
+## Error Handling
+
+```python
+try:
+    generated_ids = model.generate(**inputs, max_new_tokens=128)
+except RuntimeError as e:
+    if "out of memory" in str(e):
+        print("Reduce batch size or use smaller images/videos")
+    raise
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Generation Parameters" icon="gear" href="/inference/generation-parameters">
+    Configure sampling parameters for better outputs
+  </Card>
+  <Card title="Pixel Control" icon="sliders" href="/inference/pixel-control">
+    Optimize memory usage with resolution control
+  </Card>
+</CardGroup>

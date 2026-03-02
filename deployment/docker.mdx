@@ -1,0 +1,145 @@
+---
+title: Docker Deployment
+description: Deploy Qwen3-VL using pre-built Docker images
+---
+
+## Overview
+
+To simplify the deployment process, we provide Docker images with pre-built environments. You only need to install the GPU driver and download model files to launch demos.
+
+## Docker Image
+
+Our official Docker images are available on Docker Hub:
+
+- **Repository**: [qwenllm/qwenvl](https://hub.docker.com/r/qwenllm/qwenvl)
+- **Tag**: `qwen3vl-cu128` (CUDA 12.8)
+
+## Quick Start
+
+Run the Docker container with GPU support:
+
+```bash
+docker run --gpus all --ipc=host --network=host --rm --name qwen3vl -it qwenllm/qwenvl:qwen3vl-cu128 bash
+```
+
+### Command Breakdown
+
+- `--gpus all`: Enable access to all available GPUs
+- `--ipc=host`: Use host IPC namespace (required for shared memory)
+- `--network=host`: Use host network stack
+- `--rm`: Automatically remove the container when it exits
+- `--name qwen3vl`: Assign a name to the container
+- `-it`: Run in interactive mode with a terminal
+
+## Running Web Demo
+
+For a quick start with the web demo, use the provided script:
+
+```bash
+cd docker && bash run_web_demo.sh -c /your/path/to/qwen3vl/weight --port 8881
+```
+
+### Parameters
+
+- `-c`: Path to the Qwen3-VL model weights
+- `--port`: Port number for the web interface (default: 8881)
+
+## Using the Container
+
+Once inside the container, you have access to:
+
+- Pre-installed dependencies (transformers, vLLM, etc.)
+- Python environment configured for Qwen3-VL
+- All required CUDA libraries
+
+### Example Usage
+
+After entering the container, you can run inference scripts:
+
+```bash
+# Inside the container
+python your_inference_script.py
+```
+
+Or start a vLLM server:
+
+```bash
+vllm serve Qwen/Qwen3-VL-235B-A22B-Instruct-FP8 \
+  --tensor-parallel-size 8 \
+  --mm-encoder-tp-mode data \
+  --enable-expert-parallel \
+  --async-scheduling \
+  --media-io-kwargs '{"video": {"num_frames": -1}}' \
+  --host 0.0.0.0 \
+  --port 22002
+```
+
+## Mounting Local Directories
+
+To access local model files or data, mount directories when running the container:
+
+```bash
+docker run --gpus all --ipc=host --network=host \
+  -v /local/path/to/models:/models \
+  -v /local/path/to/data:/data \
+  --rm --name qwen3vl -it qwenllm/qwenvl:qwen3vl-cu128 bash
+```
+
+## Prerequisites
+
+### GPU Driver
+
+Ensure you have the NVIDIA GPU driver installed on your host system:
+
+- **Minimum version**: 525.60.13 or later
+- **Recommended**: Latest stable driver for your GPU
+
+### Docker and nvidia-docker
+
+Install Docker and the NVIDIA Container Toolkit:
+
+```bash
+# Install Docker (Ubuntu/Debian)
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install NVIDIA Container Toolkit
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
+  sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-docker2
+sudo systemctl restart docker
+```
+
+## Troubleshooting
+
+### GPU Not Available
+
+If GPUs are not accessible inside the container:
+
+1. Verify GPU driver installation:
+   ```bash
+   nvidia-smi
+   ```
+
+2. Check Docker runtime:
+   ```bash
+   docker run --gpus all nvidia/cuda:12.8.0-base-ubuntu22.04 nvidia-smi
+   ```
+
+### Out of Memory
+
+If you encounter out-of-memory errors:
+
+- Reduce batch size in your inference script
+- Use quantized models (FP8, INT8, INT4)
+- Increase `--ipc=host` shared memory allocation
+
+## Next Steps
+
+- Explore [vLLM deployment](/deployment/vllm) for production use
+- Try [SGLang deployment](/deployment/sglang) as an alternative
+- Learn about the [DashScope API service](/deployment/api-service) for managed hosting

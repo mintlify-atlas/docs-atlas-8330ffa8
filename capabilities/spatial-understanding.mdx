@@ -1,0 +1,113 @@
+---
+title: Spatial Understanding
+description: See, understand, and reason about spatial information
+---
+
+# Spatial Understanding
+
+Qwen3-VL features advanced spatial understanding capabilities that enable the model to see, comprehend, and reason about spatial information in images and videos. This includes understanding object positions, viewpoints, occlusions, and complex spatial relationships.
+
+## Capabilities
+
+### Spatial Perception
+
+- **Object Positions**: Understand where objects are located in space
+- **Viewpoint Analysis**: Determine camera angle and perspective
+- **Occlusion Detection**: Identify when objects are partially hidden
+- **Depth Ordering**: Understand which objects are in front or behind
+- **Spatial Relationships**: Comprehend relative positions (left, right, above, below, etc.)
+
+### Spatial Reasoning
+
+- **Distance Estimation**: Approximate distances between objects
+- **Size Comparison**: Compare relative sizes in context
+- **Orientation Understanding**: Determine object rotation and alignment
+- **Spatial Queries**: Answer complex questions about spatial arrangements
+- **Scene Geometry**: Understand overall spatial layout and structure
+
+## Use Cases
+
+### Robotics & Navigation
+
+- **Path Planning**: Help robots navigate around obstacles
+- **Object Manipulation**: Guide robotic arms based on spatial understanding
+- **Scene Analysis**: Build spatial maps for robot operation
+- **Collision Avoidance**: Predict and prevent spatial conflicts
+
+### Autonomous Systems
+
+- **Self-driving**: Understand spatial relationships on roads
+- **Drone Navigation**: Navigate 3D environments safely
+- **Space Planning**: Analyze and optimize spatial layouts
+
+### AR/VR & Gaming
+
+- **Object Placement**: Position virtual objects realistically
+- **Environment Understanding**: Adapt experiences to spatial context
+- **Spatial Interaction**: Enable natural spatial interactions
+
+### Architecture & Design
+
+- **Space Analysis**: Evaluate room layouts and furniture arrangements
+- **Accessibility**: Analyze spatial accessibility and flow
+- **Design Optimization**: Suggest spatial improvements
+
+### Accessibility
+
+- **Scene Description**: Describe spatial layouts for visually impaired users
+- **Navigation Aid**: Help users understand spatial environments
+- **Spatial Audio**: Guide spatial audio generation
+
+## Try It Out
+
+Explore spatial understanding with our interactive cookbook:
+
+<Card title="Spatial Understanding Cookbook" icon="book" href="https://github.com/QwenLM/Qwen3-VL/blob/main/cookbooks/spatial_understanding.ipynb">
+  See, understand and reason about the spatial information
+</Card>
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QwenLM/Qwen3-VL/blob/main/cookbooks/spatial_understanding.ipynb)
+
+## Key Features
+
+### Advanced Spatial Perception
+
+Qwen3-VL's spatial understanding includes:
+
+- **Judge Object Positions**: Accurately determine where objects are located
+- **Viewpoint Analysis**: Understand camera perspective and angle
+- **Occlusion Reasoning**: Infer hidden parts of objects and scenes
+- **Relative Positioning**: Understand spatial relationships between multiple objects
+
+### Integrated with Grounding
+
+- **2D Grounding**: Stronger 2D object grounding with spatial context
+- **3D Grounding**: Enable 3D bounding boxes for spatial reasoning
+- **Spatial Context**: Use spatial understanding to improve grounding accuracy
+
+## Technical Highlights
+
+Qwen3-VL achieves advanced spatial understanding through:
+
+- **DeepStack Architecture**: Multi-level ViT features for fine-grained spatial details
+- **Enhanced Visual Perception**: Improved spatial perception from training
+- **Geometric Reasoning**: Apply geometric constraints and rules
+- **Context Integration**: Combine spatial cues from entire scene
+
+## Example Queries
+
+Spatial understanding enables answering questions like:
+
+- "What is to the left of the blue car?"
+- "Which object is closest to the camera?"
+- "Is the lamp behind or in front of the couch?"
+- "How many objects are on the table?"
+- "What's the spatial relationship between the dog and the tree?"
+- "Which direction is the person facing?"
+
+## Related Capabilities
+
+- [2D Grounding](/capabilities/grounding-2d) - Locate objects in 2D space
+- [3D Grounding](/capabilities/grounding-3d) - 3D bounding boxes for spatial scenes
+- [Video Understanding](/capabilities/video-understanding) - Spatial understanding in video
+- [Omni Recognition](/capabilities/omni-recognition) - Identify objects in spatial context

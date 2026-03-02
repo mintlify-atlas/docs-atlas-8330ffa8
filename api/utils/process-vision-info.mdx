@@ -1,0 +1,234 @@
+---
+title: 'process_vision_info'
+description: 'Extract and process vision information from conversation messages'
+---
+
+## Function Signature
+
+```python
+def process_vision_info(
+    conversations: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]],
+    return_video_kwargs: bool = False,
+    return_video_metadata: bool = False,
+    image_patch_size: int = 14,
+) -> Tuple[Optional[List[Image.Image]], Optional[List[Union[torch.Tensor, List[Image.Image]]]], Optional[Dict[str, Any]]]
+```
+
+## Description
+
+The main function for extracting and processing all vision information (images and videos) from conversation messages. It automatically detects vision content, loads the media, applies smart resizing, and returns processed inputs ready for model processors.
+
+## Parameters
+
+<ParamField path="conversations" type="Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]]" required>
+  Conversation messages containing vision content. Can be:
+  - A single conversation: `[{"role": "user", "content": [...]}]`
+  - Multiple conversations: `[[{"role": "user", "content": [...]}], ...]`
+  
+  Each message content should contain dictionaries with `type` and corresponding media keys:
+  - Images: `{"type": "image", "image": "path/url/base64"}`
+  - Videos: `{"type": "video", "video": "path/url"}`
+</ParamField>
+
+<ParamField path="return_video_kwargs" type="bool" default="False">
+  Whether to return video-specific keyword arguments (like fps) for the processor.
+  
+  Required for Qwen2.5VL models that need video processing parameters.
+</ParamField>
+
+<ParamField path="return_video_metadata" type="bool" default="False">
+  Whether to return video metadata (fps, frame indices, total frames, backend) alongside video tensors.
+  
+  Required for Qwen3VL models that need detailed video metadata.
+</ParamField>
+
+<ParamField path="image_patch_size" type="int" default="14">
+  The patch size used by the vision encoder. Affects resizing calculations.
+  
+  Common values:
+  - `14` for Qwen2VL and Qwen2.5VL
+  - `16` for Qwen3VL
+</ParamField>
+
+## Returns
+
+<ResponseField name="image_inputs" type="Optional[List[PIL.Image.Image]]">
+  List of processed PIL Image objects, or `None` if no images found.
+  
+  Images are resized using smart_resize to optimal dimensions based on min_pixels and max_pixels.
+</ResponseField>
+
+<ResponseField name="video_inputs" type="Optional[List[Union[torch.Tensor, Tuple[torch.Tensor, Dict]]]]">
+  List of processed video tensors with shape `(T, C, H, W)`, or `None` if no videos found.
+  
+  If `return_video_metadata=True`, each item is a tuple of `(video_tensor, metadata_dict)`.
+</ResponseField>
+
+<ResponseField name="video_kwargs" type="Optional[Dict[str, Any]]">
+  Dictionary of video processing parameters (only returned if `return_video_kwargs=True`).
+  
+  Contains:
+  - `do_sample_frames`: Always `False`
+  - `fps`: List of sample fps values (only if `return_video_metadata=False`)
+</ResponseField>
+
+## Usage Examples
+
+### Qwen2VL
+
+```python
+from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
+from qwen_vl_utils import process_vision_info
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": "file:///path/to/image.jpg"},
+            {"type": "text", "text": "Describe this image."}
+        ]
+    }
+]
+
+processor = AutoProcessor.from_pretrained(model_path)
+model = Qwen2VLForConditionalGeneration.from_pretrained(
+    model_path, torch_dtype="auto", device_map="auto"
+)
+
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+images, videos = process_vision_info(messages)
+inputs = processor(text=text, images=images, videos=videos, padding=True, return_tensors="pt")
+
+generated_ids = model.generate(**inputs)
+```
+
+### Qwen2.5VL
+
+```python
+from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+from qwen_vl_utils import process_vision_info
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "video", "video": "file:///path/to/video.mp4", "fps": 2.0},
+            {"type": "text", "text": "Describe this video."}
+        ]
+    }
+]
+
+processor = AutoProcessor.from_pretrained(model_path)
+model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+    model_path, torch_dtype="auto", device_map="auto"
+)
+
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+images, videos, video_kwargs = process_vision_info(messages, return_video_kwargs=True)
+inputs = processor(
+    text=text, images=images, videos=videos, 
+    padding=True, return_tensors="pt", **video_kwargs
+)
+
+generated_ids = model.generate(**inputs)
+```
+
+### Qwen3VL
+
+```python
+from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
+from qwen_vl_utils import process_vision_info
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "video", "video": "file:///path/to/video.mp4"},
+            {"type": "text", "text": "Describe this video."}
+        ]
+    }
+]
+
+processor = AutoProcessor.from_pretrained(model_path)
+model = Qwen3VLForConditionalGeneration.from_pretrained(
+    model_path, dtype="auto", device_map="auto"
+)
+
+text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+images, videos, video_kwargs = process_vision_info(
+    messages, image_patch_size=16, return_video_kwargs=True, return_video_metadata=True
+)
+
+if videos is not None:
+    videos, video_metadatas = zip(*videos)
+    videos, video_metadatas = list(videos), list(video_metadatas)
+else:
+    video_metadatas = None
+
+inputs = processor(
+    text=text, images=images, videos=videos, 
+    video_metadata=video_metadatas, return_tensors="pt", 
+    do_resize=False, **video_kwargs
+)
+inputs = inputs.to(model.device)
+
+generated_ids = model.generate(**inputs)
+```
+
+## Vision Content Formats
+
+### Image Content
+
+```python
+# Local file
+{"type": "image", "image": "file:///path/to/image.jpg"}
+
+# URL
+{"type": "image", "image": "http://example.com/image.jpg"}
+
+# Base64
+{"type": "image", "image": "data:image;base64,/9j/..."}
+
+# PIL Image
+{"type": "image", "image": pil_image}
+
+# With custom dimensions
+{
+    "type": "image",
+    "image": "file:///path/to/image.jpg",
+    "resized_height": 280,
+    "resized_width": 420
+}
+```
+
+### Video Content
+
+```python
+# Video file
+{"type": "video", "video": "file:///path/to/video.mp4"}
+
+# Frame sequence
+{
+    "type": "video",
+    "video": [
+        "file:///path/to/frame1.jpg",
+        "file:///path/to/frame2.jpg",
+        "file:///path/to/frame3.jpg"
+    ]
+}
+
+# With custom parameters
+{
+    "type": "video",
+    "video": "file:///path/to/video.mp4",
+    "fps": 2.0,
+    "resized_height": 280,
+    "resized_width": 280
+}
+```
+
+## See Also
+
+- [fetch_image](/api/utils/fetch-image) - Load individual images
+- [fetch_video](/api/utils/fetch-video) - Load individual videos
+- [smart_resize](/api/utils/smart-resize) - Resize images intelligently

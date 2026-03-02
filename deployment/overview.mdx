@@ -1,0 +1,66 @@
+---
+title: Deployment Overview
+description: Learn about different deployment options for Qwen3-VL models
+---
+
+## Deployment Options
+
+Qwen3-VL offers multiple deployment options to suit different use cases and infrastructure requirements. Choose the deployment method that best fits your needs:
+
+### vLLM (Recommended)
+
+We recommend using vLLM for fast Qwen3-VL deployment and inference. You need to install `vllm>=0.11.0` to enable Qwen3-VL support.
+
+**Key Features:**
+- Fast inference with optimized kernels
+- Online serving with OpenAI-compatible API
+- Offline inference support
+- Efficient memory management
+- Multi-GPU support with tensor parallelism
+
+See the [vLLM deployment guide](/deployment/vllm) for detailed instructions.
+
+### SGLang
+
+SGLang provides an alternative high-performance serving solution with:
+- Fast inference engine
+- OpenAI-compatible API
+- Flexible configuration options
+
+See the [SGLang deployment guide](/deployment/sglang) for setup instructions.
+
+### Docker
+
+For simplified deployment, we provide pre-built Docker images with all dependencies configured:
+- [qwenllm/qwenvl](https://hub.docker.com/r/qwenllm/qwenvl) on Docker Hub
+- Pre-configured environments
+- Easy to launch demos
+
+See the [Docker deployment guide](/deployment/docker) for usage instructions.
+
+### DashScope API Service
+
+For production use without managing infrastructure, you can use the DashScope API service:
+- Fully managed service
+- OpenAI-compatible client
+- No infrastructure setup required
+- Scalable and reliable
+
+See the [API service guide](/deployment/api-service) for integration details.
+
+## Choosing a Deployment Method
+
+| Method | Best For | Setup Complexity | Performance |
+|--------|----------|------------------|-------------|
+| vLLM | Production deployments, high throughput | Medium | Excellent |
+| SGLang | Alternative to vLLM, flexible configs | Medium | Excellent |
+| Docker | Quick start, demos, development | Low | Good |
+| DashScope API | No infrastructure management | Very Low | Excellent |
+
+## Next Steps
+
+Explore the detailed deployment guides:
+- [vLLM Deployment](/deployment/vllm)
+- [SGLang Deployment](/deployment/sglang)
+- [Docker Deployment](/deployment/docker)
+- [API Service](/deployment/api-service)

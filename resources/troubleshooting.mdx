@@ -1,0 +1,464 @@
+---
+title: Troubleshooting
+description: Common issues and solutions when working with Qwen3-VL
+---
+
+## GPU and Memory Issues
+
+### CUDA Out of Memory
+
+**Problem**: Getting CUDA out of memory errors when loading or running models.
+
+**Solutions**:
+
+1. **Use Quantized Models**
+   - FP8 quantization for H100/H200 GPUs (requires CUDA 12+)
+   - Check the [HuggingFace collection](https://huggingface.co/collections/Qwen/qwen3-vl-68d2a7c1b8a8afce4ebd2dbe) for quantized versions
+
+2. **Adjust Precision**
+   ```python
+   # Use bfloat16 instead of float32
+   model = AutoModelForImageTextToText.from_pretrained(
+       "Qwen/Qwen3-VL-8B-Instruct",
+       dtype=torch.bfloat16,
+       device_map="auto"
+   )
+   ```
+
+3. **Enable Flash Attention 2**
+   ```python
+   # Install flash-attn first
+   # pip install -U flash-attn --no-build-isolation
+   
+   model = AutoModelForImageTextToText.from_pretrained(
+       "Qwen/Qwen3-VL-8B-Instruct",
+       dtype=torch.bfloat16,
+       attn_implementation="flash_attention_2",
+       device_map="auto"
+   )
+   ```
+
+4. **Reduce Visual Token Budget**
+   ```python
+   # For images - reduce max_pixels
+   processor.image_processor.size = {
+       "longest_edge": 512*32*32,  # Reduced from default
+       "shortest_edge": 256*32*32
+   }
+   
+   # For videos - reduce frame count or resolution
+   inputs = processor.apply_chat_template(
+       messages,
+       tokenize=True,
+       add_generation_prompt=True,
+       return_dict=True,
+       return_tensors="pt",
+       fps=1  # Reduce from default fps=2
+   )
+   ```
+
+5. **Use a Smaller Model**
+   - Qwen3-VL-2B or 4B for edge/consumer GPUs
+   - Qwen3-VL-30B-A3B (MoE) has only 3B active parameters
+
+### Minimum VRAM Requirements
+
+<Warning>
+Actual memory usage is typically 1.2-1.5x the theoretical minimum due to activations and intermediate tensors.
+</Warning>
+
+**Estimated VRAM by Model Size** (BF16 precision):
+
+| Model | BF16 VRAM | INT8 VRAM | Notes |
+|-------|-----------|-----------|-------|
+| Qwen3-VL-2B | ~4-5 GB | ~2-3 GB | Suitable for consumer GPUs |
+| Qwen3-VL-4B | ~8-10 GB | ~4-5 GB | RTX 3090/4090 |
+| Qwen3-VL-8B | ~16-20 GB | ~8-10 GB | A100 40GB, H100 |
+| Qwen3-VL-32B | ~64-80 GB | ~32-40 GB | Multi-GPU required |
+| Qwen3-VL-30B-A3B | ~60-75 GB | ~30-38 GB | MoE model |
+| Qwen3-VL-235B-A22B | ~450-550 GB | ~225-275 GB | 8x H100 recommended |
+
+### Multi-GPU Setup
+
+**Problem**: Model doesn't fit on a single GPU.
+
+**Solution**: Use tensor parallelism or model parallelism
+
+```python
+# Automatic device mapping
+model = AutoModelForImageTextToText.from_pretrained(
+    "Qwen/Qwen3-VL-32B-Instruct",
+    dtype=torch.bfloat16,
+    device_map="auto"  # Automatically splits across GPUs
+)
+```
+
+**For vLLM**:
+```bash
+vllm serve Qwen/Qwen3-VL-235B-A22B-Instruct-FP8 \
+  --tensor-parallel-size 8 \
+  --mm-encoder-tp-mode data \
+  --enable-expert-parallel
+```
+
+## Installation Issues
+
+### Transformers Version
+
+**Problem**: Model loading fails or unexpected behavior.
+
+**Solution**: Ensure you have the correct transformers version:
+
+```bash
+# Qwen3-VL requires transformers >= 4.57.0
+pip install "transformers>=4.57.0"
+```
+
+### Flash Attention Installation
+
+**Problem**: Flash Attention compilation fails.
+
+**Solutions**:
+
+1. **Check CUDA compatibility**
+   - Flash Attention 2 requires CUDA 11.6+
+   - Check GPU compatibility (Ampere, Ada, Hopper architectures)
+
+2. **Install pre-built wheels**
+   ```bash
+   pip install flash-attn --no-build-isolation
+   ```
+
+3. **Build from source** (if wheels fail)
+   ```bash
+   git clone https://github.com/Dao-AILab/flash-attention
+   cd flash-attention
+   python setup.py install
+   ```
+
+### Video Processing Dependencies
+
+**Problem**: Video loading fails or hangs.
+
+**Solutions**:
+
+1. **Install with video support**
+   ```bash
+   # Recommended: Use torchcodec (fastest, most compatible)
+   # See https://github.com/pytorch/torchcodec for installation
+   
+   # Or use decord (Linux only from PyPI)
+   pip install qwen-vl-utils[decord]
+   
+   # Fallback: torchvision (slowest but most compatible)
+   pip install qwen-vl-utils
+   ```
+
+2. **Video URL compatibility**
+   
+   | Backend | HTTP | HTTPS |
+   |---------|------|-------|
+   | torchvision >= 0.19.0 | ✅ | ✅ |
+   | torchvision < 0.19.0 | ❌ | ❌ |
+   | decord | ✅ | ❌ |
+   | torchcodec | ✅ | ✅ |
+
+3. **Force specific backend**
+   ```bash
+   export FORCE_QWENVL_VIDEO_READER=torchcodec  # or decord, torchvision
+   ```
+
+## Context Length Issues
+
+### Input Too Long
+
+**Problem**: Sequence length exceeds model's context window.
+
+**Default Context Length**: 256K tokens
+
+**Solutions**:
+
+1. **Reduce Visual Tokens**
+   ```python
+   # Reduce image resolution
+   messages = [
+       {
+           "role": "user",
+           "content": [
+               {
+                   "type": "image",
+                   "image": "path/to/image.jpg",
+                   "min_pixels": 50176,    # Lower resolution
+                   "max_pixels": 50176,
+               },
+               {"type": "text", "text": "Describe this image."},
+           ],
+       }
+   ]
+   ```
+
+2. **Enable YaRN for Extended Context** (up to 1M tokens)
+   
+   Modify `config.json`:
+   ```json
+   {
+       "max_position_embeddings": 1000000,
+       "rope_scaling": {
+           "rope_type": "yarn",
+           "mrope_section": [24, 20, 20],
+           "mrope_interleaved": true,
+           "factor": 3.0,
+           "original_max_position_embeddings": 262144
+       }
+   }
+   ```
+   
+   **For vLLM**:
+   ```bash
+   vllm serve Qwen/Qwen3-VL-8B-Instruct \
+     --rope-scaling '{"rope_type":"yarn","factor":3.0,"original_max_position_embeddings":262144,"mrope_section":[24,20,20],"mrope_interleaved":true}' \
+     --max-model-len 1000000
+   ```
+
+<Note>
+Because Interleaved-MRoPE's position IDs grow more slowly than vanilla RoPE, use a smaller scaling factor. For 1M context with 256K base, use factor=2 or 3, not 4.
+</Note>
+
+### Video Too Long
+
+**Problem**: Long videos exceed token budget.
+
+**Solutions**:
+
+1. **Reduce FPS**
+   ```python
+   inputs = processor.apply_chat_template(
+       messages,
+       tokenize=True,
+       add_generation_prompt=True,
+       return_dict=True,
+       return_tensors="pt",
+       fps=1  # Lower FPS for longer videos
+   )
+   ```
+
+2. **Set Frame Limit**
+   ```python
+   inputs = processor.apply_chat_template(
+       messages,
+       tokenize=True,
+       add_generation_prompt=True,
+       return_dict=True,
+       return_tensors="pt",
+       num_frames=128,  # Maximum frames
+       fps=None  # Overwrite fps
+   )
+   ```
+
+3. **Use total_pixels limit with qwen-vl-utils**
+   ```python
+   messages = [
+       {
+           "role": "user",
+           "content": [
+               {
+                   "type": "video",
+                   "video": "path/to/video.mp4",
+                   "total_pixels": 20480 * 32 * 32,  # Limit total tokens
+               },
+               {"type": "text", "text": "Describe this video."},
+           ],
+       }
+   ]
+   ```
+
+## Model Loading Issues
+
+### Download Errors
+
+**Problem**: Model download fails or is very slow.
+
+**Solutions**:
+
+1. **For users in mainland China**: Use ModelScope
+   ```python
+   from modelscope import snapshot_download
+   
+   model_dir = snapshot_download('qwen/Qwen3-VL-8B-Instruct')
+   ```
+
+2. **Resume interrupted downloads**
+   ```python
+   from huggingface_hub import snapshot_download
+   
+   snapshot_download(
+       "Qwen/Qwen3-VL-8B-Instruct",
+       resume_download=True
+   )
+   ```
+
+3. **Use HF mirror** (set environment variable)
+   ```bash
+   export HF_ENDPOINT=https://hf-mirror.com
+   ```
+
+### Import Errors
+
+**Problem**: `ImportError` or `ModuleNotFoundError`.
+
+**Solutions**:
+
+1. **Check all dependencies**
+   ```bash
+   pip install transformers>=4.57.0 accelerate qwen-vl-utils
+   ```
+
+2. **For vLLM**
+   ```bash
+   pip install vllm>=0.11.0
+   ```
+
+3. **For web demo**
+   ```bash
+   pip install -r requirements_web_demo.txt
+   ```
+
+## Inference Issues
+
+### Slow Inference
+
+**Problem**: Generation is very slow.
+
+**Solutions**:
+
+1. **Use vLLM for production**
+   ```bash
+   vllm serve Qwen/Qwen3-VL-8B-Instruct \
+     --host 0.0.0.0 \
+     --port 8000
+   ```
+
+2. **Enable Flash Attention**
+   ```python
+   model = AutoModelForImageTextToText.from_pretrained(
+       "Qwen/Qwen3-VL-8B-Instruct",
+       attn_implementation="flash_attention_2"
+   )
+   ```
+
+3. **Use FP8 quantization** (H100/H200)
+   ```bash
+   vllm serve Qwen/Qwen3-VL-8B-Instruct-FP8
+   ```
+
+4. **Batch inference**
+   ```python
+   # Process multiple inputs together
+   processor.tokenizer.padding_side = 'left'
+   inputs = processor.apply_chat_template(
+       [messages1, messages2, messages3],
+       padding=True
+   )
+   ```
+
+### Unexpected Outputs
+
+**Problem**: Model generates incorrect or unexpected results.
+
+**Solutions**:
+
+1. **Check input format**
+   - Verify image/video paths are correct
+   - Ensure proper message structure
+
+2. **Adjust generation parameters**
+   ```python
+   # For more deterministic outputs
+   generated_ids = model.generate(
+       **inputs,
+       max_new_tokens=512,
+       temperature=0.1,  # Lower temperature
+       top_p=0.9,
+       do_sample=True
+   )
+   ```
+
+3. **Use appropriate model edition**
+   - Instruct: General-purpose tasks
+   - Thinking: Complex reasoning, STEM, math
+
+4. **Verify processor settings**
+   ```python
+   # Reset to defaults if customized
+   processor = AutoProcessor.from_pretrained(
+       "Qwen/Qwen3-VL-8B-Instruct"
+   )
+   ```
+
+## Docker Issues
+
+### Container Won't Start
+
+**Problem**: Docker container fails to start.
+
+**Solutions**:
+
+1. **Check GPU availability**
+   ```bash
+   docker run --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
+   ```
+
+2. **Install NVIDIA Container Toolkit**
+   ```bash
+   distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+   curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+   curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
+     sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+   sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+   sudo systemctl restart docker
+   ```
+
+3. **Use official image**
+   ```bash
+   docker run --gpus all --ipc=host --network=host --rm \
+     -it qwenllm/qwenvl:qwen3vl-cu128 bash
+   ```
+
+## API Issues
+
+### API Authentication Errors
+
+**Problem**: API calls fail with authentication errors.
+
+**Solution**: Set API key correctly
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="YOUR_DASHSCOPE_API_KEY",
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+```
+
+See the [API documentation](https://help.aliyun.com/zh/model-studio/developer-reference/qwen-vl-api) for more details.
+
+## Getting Help
+
+If you're still experiencing issues:
+
+1. **Check the GitHub Issues**: [Qwen3-VL Issues](https://github.com/QwenLM/Qwen3-VL/issues)
+2. **Join the Community**:
+   - [Discord](https://discord.gg/CV4E9rpNSD)
+   - [WeChat Group](https://github.com/QwenLM/Qwen/blob/main/assets/wechat.png)
+3. **Consult the Documentation**:
+   - [Model Cards](/resources/model-cards)
+   - [FAQ](/resources/faq)
+   - [Technical Paper](https://arxiv.org/pdf/2511.21631)
+
+## Related Resources
+
+- [Installation Guide](/installation)
+- [Quickstart](/quickstart)
+- [Deployment](/deployment/vllm)
+- [FAQ](/resources/faq)

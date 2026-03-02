@@ -1,0 +1,289 @@
+---
+title: 'fetch_video'
+description: 'Extract and process video frames for vision-language models'
+---
+
+## Function Signature
+
+```python
+def fetch_video(
+    ele: Dict[str, Any], 
+    image_patch_size: int = 14, 
+    return_video_sample_fps: bool = False,
+    return_video_metadata: bool = False
+) -> Union[torch.Tensor, Tuple[torch.Tensor, Dict], Tuple[Union[torch.Tensor, Tuple[torch.Tensor, Dict]], float]]
+```
+
+## Description
+
+Extracts frames from a video file or processes a sequence of image frames. Applies smart resizing and frame sampling based on FPS and pixel constraints. Supports multiple video reading backends (torchcodec, decord, torchvision).
+
+## Parameters
+
+<ParamField path="ele" type="Dict[str, Any]" required>
+  Dictionary containing video information and processing parameters.
+  
+  Required keys:
+  - `video`: Video source (file path, URL) or list of frame paths
+  
+  Optional frame sampling keys (mutually exclusive):
+  - `fps`: Target frames per second for extraction (default: 2.0)
+  - `nframes`: Exact number of frames to extract
+  
+  Optional frame sampling constraints (only with `fps`):
+  - `min_frames`: Minimum frames to extract (default: 4)
+  - `max_frames`: Maximum frames to extract (default: 768)
+  
+  Optional time range keys:
+  - `video_start`: Start time in seconds
+  - `video_end`: End time in seconds
+  
+  Optional resize keys:
+  - `resized_height`: Target height
+  - `resized_width`: Target width
+  - `min_pixels`: Minimum pixels per frame (default: 128 * patch_factor²)
+  - `max_pixels`: Maximum pixels per frame (calculated dynamically)
+  - `total_pixels`: Total pixel budget for all frames (default: MODEL_SEQ_LEN * patch_factor² * 0.9)
+</ParamField>
+
+<ParamField path="image_patch_size" type="int" default="14">
+  The patch size used by the vision encoder.
+  
+  Common values:
+  - `14` for Qwen2VL and Qwen2.5VL
+  - `16` for Qwen3VL
+</ParamField>
+
+<ParamField path="return_video_sample_fps" type="bool" default="False">
+  Whether to return the sample FPS alongside the video tensor.
+</ParamField>
+
+<ParamField path="return_video_metadata" type="bool" default="False">
+  Whether to return video metadata (fps, frame indices, total frames, backend) alongside the video tensor.
+  
+  Required for Qwen3VL models.
+</ParamField>
+
+## Returns
+
+<ResponseField name="video" type="torch.Tensor">
+  Video tensor with shape `(T, C, H, W)` where:
+  - `T`: Number of frames (divisible by 2)
+  - `C`: Color channels (3 for RGB)
+  - `H`: Frame height (divisible by patch_factor)
+  - `W`: Frame width (divisible by patch_factor)
+</ResponseField>
+
+<ResponseField name="video_metadata" type="Dict[str, Any]">
+  Only returned if `return_video_metadata=True`. Contains:
+  - `fps`: Original video FPS
+  - `frames_indices`: List of extracted frame indices
+  - `total_num_frames`: Total frames in the video
+  - `video_backend`: Backend used ("torchcodec", "decord", or "torchvision")
+</ResponseField>
+
+<ResponseField name="sample_fps" type="float">
+  Only returned if `return_video_sample_fps=True`. The effective FPS of the sampled frames.
+</ResponseField>
+
+## Video Reading Backends
+
+The function automatically selects the best available backend:
+
+1. **torchcodec** (preferred, fastest)
+2. **decord** (good performance)
+3. **torchvision** (fallback, always available)
+
+You can force a specific backend using the environment variable:
+
+```bash
+export FORCE_QWENVL_VIDEO_READER=decord
+```
+
+## Usage Examples
+
+### Basic Video Loading
+
+```python
+from qwen_vl_utils import fetch_video
+import torch
+
+video = fetch_video({
+    "video": "file:///path/to/video.mp4"
+})
+
+print(video.shape)  # (T, 3, H, W)
+```
+
+### Custom FPS Sampling
+
+```python
+# Extract 1 frame per second
+video = fetch_video({
+    "video": "file:///path/to/video.mp4",
+    "fps": 1.0
+})
+```
+
+### Exact Frame Count
+
+```python
+# Extract exactly 8 frames
+video = fetch_video({
+    "video": "file:///path/to/video.mp4",
+    "nframes": 8
+})
+```
+
+### Time Range Selection
+
+```python
+# Extract frames from 10s to 30s
+video = fetch_video({
+    "video": "file:///path/to/video.mp4",
+    "video_start": 10.0,
+    "video_end": 30.0,
+    "fps": 2.0
+})
+```
+
+### Frame Sequence Input
+
+```python
+# Process pre-extracted frames
+video = fetch_video({
+    "video": [
+        "file:///path/to/frame1.jpg",
+        "file:///path/to/frame2.jpg",
+        "file:///path/to/frame3.jpg",
+        "file:///path/to/frame4.jpg"
+    ]
+})
+```
+
+### Custom Resolution
+
+```python
+video = fetch_video({
+    "video": "file:///path/to/video.mp4",
+    "fps": 2.0,
+    "resized_height": 280,
+    "resized_width": 280
+})
+```
+
+### With Metadata (Qwen3VL)
+
+```python
+video, metadata = fetch_video(
+    {"video": "file:///path/to/video.mp4"},
+    image_patch_size=16,
+    return_video_metadata=True
+)
+
+print(metadata["fps"])              # Original FPS
+print(metadata["total_num_frames"]) # Total frames
+print(metadata["frames_indices"])   # Extracted frame indices
+print(metadata["video_backend"])    # Backend used
+```
+
+## Frame Sampling Algorithm
+
+The function uses intelligent frame sampling:
+
+1. **Determine frame count**:
+   - If `nframes` specified: Use that value (rounded to multiple of 2)
+   - If `fps` specified: Calculate `nframes = total_frames / video_fps * fps`
+   - Apply `min_frames` and `max_frames` constraints
+
+2. **Extract frames**: Uniformly sample frames across the specified range
+
+3. **Resize frames**: Apply [smart_resize](/api/utils/smart-resize) to each frame
+
+## Pixel Budget Management
+
+The function automatically manages pixel budgets to prevent exceeding model limits:
+
+```python
+# Default calculation
+min_pixels_per_frame = VIDEO_MIN_TOKEN_NUM * patch_factor²  # 128 * 28² = 100,352
+total_pixel_budget = MODEL_SEQ_LEN * patch_factor² * 0.9    # 128000 * 28² * 0.9
+max_pixels_per_frame = min(
+    VIDEO_FRAME_MAX_PIXELS,                                  # 768 * 28² = 602,112
+    total_pixel_budget / nframes * FRAME_FACTOR
+)
+```
+
+You can customize the total pixel budget:
+
+```python
+video = fetch_video({
+    "video": "file:///path/to/video.mp4",
+    "fps": 2.0,
+    "total_pixels": 32000 * 28 * 28 * 0.9  # Custom budget for Qwen2.5VL
+})
+```
+
+Or set via environment variable:
+
+```bash
+export VIDEO_MAX_PIXELS=25088000  # 32000 * 28 * 28 * 0.9
+```
+
+## Error Handling
+
+### Invalid Time Range
+
+```python
+try:
+    video = fetch_video({
+        "video": "file:///path/to/video.mp4",
+        "video_start": 100.0,
+        "video_end": 10.0  # End before start
+    })
+except ValueError as e:
+    print(f"Error: {e}")
+    # Invalid time range: Start frame exceeds end frame
+```
+
+### Invalid Frame Count
+
+```python
+try:
+    video = fetch_video({
+        "video": "file:///path/to/video.mp4",
+        "nframes": 1  # Too few frames (minimum is 2)
+    })
+except ValueError as e:
+    print(f"Error: {e}")
+    # nframes should in interval [2, total_frames]
+```
+
+## Performance Tips
+
+1. **Use torchcodec** for best performance (pip install torchcodec)
+2. **Limit max_frames** to reduce processing time
+3. **Use frame sequences** for pre-extracted frames to skip video decoding
+4. **Adjust total_pixels** based on your model's sequence length limit
+
+## Environment Variables
+
+```bash
+# Force specific video reader backend
+export FORCE_QWENVL_VIDEO_READER=torchcodec  # or decord, torchvision
+
+# Set torchcodec thread count
+export TORCHCODEC_NUM_THREADS=8
+
+# Set model sequence length limit
+export MODEL_SEQ_LEN=128000
+
+# Set video pixel budget
+export VIDEO_MAX_PIXELS=25088000
+```
+
+## See Also
+
+- [process_vision_info](/api/utils/process-vision-info) - Process all vision content from conversations
+- [fetch_image](/api/utils/fetch-image) - Load individual images
+- [smart_resize](/api/utils/smart-resize) - Understanding the resize algorithm
